@@ -157,7 +157,7 @@ export class KittyAgent<X extends XRPC = XRPC> {
         return data;
     }
 
-    private async listHelper<K extends string, T extends { cursor?: string | undefined }, U>(
+    private async paginationHelper<K extends string, T extends { cursor?: string | undefined }, U>(
         limit: number | undefined,
         key: K,
         query: (cursor: string | undefined, limit: number) => Promise<T>,
@@ -208,7 +208,7 @@ export class KittyAgent<X extends XRPC = XRPC> {
         reverse?: boolean,
         limit?: number;
     }): Promise<ListRecordsOutput<K>> {
-        return await this.listHelper(
+        return await this.paginationHelper(
             params.limit,
             'records',
             async (cursor, limit) => await this.query('com.atproto.repo.listRecords', {
@@ -227,7 +227,7 @@ export class KittyAgent<X extends XRPC = XRPC> {
         did: At.DID,
         limit?: number;
     }) {
-        return await this.listHelper(
+        return await this.paginationHelper(
             params.limit,
             'cids',
             async (cursor, limit) => await this.query('com.atproto.sync.listBlobs', {
@@ -244,7 +244,7 @@ export class KittyAgent<X extends XRPC = XRPC> {
         did: At.DID,
         limit?: number;
     }) {
-        return await this.listHelper(
+        return await this.paginationHelper(
             params.limit,
             'repos',
             async (cursor, limit) => await this.query('com.atproto.sync.listRepos', {
