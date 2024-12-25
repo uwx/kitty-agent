@@ -157,142 +157,103 @@ export class KittyAgent<X extends XRPC = XRPC> {
         return data;
     }
 
+    private async listHelper<K extends string, T extends { cursor?: string | undefined }, U>(
+        limit: number | undefined,
+        key: K,
+        query: (cursor: string | undefined, limit: number) => Promise<T>,
+        getResults: (t: T) => U[],
+        resultsEqual: (a: U, b: U) => boolean,
+    ): Promise<{ [k in K]: U[]; } & { cursor: string | undefined; }> {
+        const PER_PAGE = 100;
+
+        const results: U[] = [];
+
+        let cursor: string | undefined = undefined;
+        do {
+            const data = await query(
+                cursor,
+                limit === undefined
+                    ? PER_PAGE
+                    : limit / PER_PAGE > 1
+                        ? PER_PAGE
+                        : limit);
+            
+            const theseResults = getResults(data);
+
+            if (!theseResults.length ||
+                theseResults.every(
+                    e => results.find(e1 => resultsEqual(e1, e))
+                )
+            ) {
+                break;
+            }
+
+            if (limit !== undefined) {
+                limit -= theseResults.length;
+            }
+
+            results.push(...theseResults);
+
+            cursor = data.cursor;
+
+            if (!cursor) break;
+        } while (cursor);
+
+        return { [key]: results, cursor } as { [k in K]: U[]; } & { cursor: string | undefined; };
+    }
+
     async paginatedList<K extends keyof Records>(params: {
         repo: string,
         collection: K,
         reverse?: boolean,
         limit?: number;
     }): Promise<ListRecordsOutput<K>> {
-        const PER_PAGE = 100;
-
-        const results: ListRecordsRecord<K>[] = [];
-
-        let limit = params.limit;
-
-        let cursor: string | undefined = undefined;
-        do {
-            const data: ComAtprotoRepoListRecords.Output
-                = await this.query('com.atproto.repo.listRecords', {
-                    repo: params.repo,
-                    collection: params.collection,
-                    limit: limit === undefined
-                        ? PER_PAGE
-                        : limit / PER_PAGE > 1
-                            ? PER_PAGE
-                            : limit,
-                    reverse: params.reverse ?? true,
-                    cursor
-                });
-
-            if (!data.records.length ||
-                data.records.every(
-                    e => results.find(e1 => e1.uri == e.uri)
-                )
-            ) {
-                break;
-            }
-
-            if (limit !== undefined) {
-                limit -= data.records.length;
-            }
-
-            results.push(...data.records as ListRecordsRecord<K>[]);
-
-            cursor = data.cursor;
-
-            if (!cursor) break;
-        } while (cursor);
-
-        return { records: results, cursor };
+        return await this.listHelper(
+            params.limit,
+            'records',
+            async (cursor, limit) => await this.query('com.atproto.repo.listRecords', {
+                repo: params.repo,
+                collection: params.collection,
+                limit,
+                reverse: params.reverse ?? true,
+                cursor
+            }),
+            output => output.records,
+            (a, b) => a.uri == b.uri,
+        ) as ListRecordsOutput<K>;
     }
 
     async paginatedListBlobs(params: {
         did: At.DID,
         limit?: number;
     }) {
-        const PER_PAGE = 1000;
-
-        const cids: string[] = [];
-
-        let limit = params.limit;
-
-        let cursor: string | undefined = undefined;
-        do {
-            const data: ComAtprotoSyncListBlobs.Output
-                = await this.query('com.atproto.sync.listBlobs', {
-                    did: params.did,
-                    limit: limit === undefined
-                        ? PER_PAGE
-                        : limit / PER_PAGE > 1
-                            ? PER_PAGE
-                            : limit,
-                    cursor
-                });
-
-            if (!data.cids.length ||
-                data.cids.every(
-                    e => cids.find(e1 => e1 == e)
-                )
-            ) {
-                break;
-            }
-
-            if (limit !== undefined) {
-                limit -= data.cids.length;
-            }
-
-            cids.push(...data.cids);
-
-            cursor = data.cursor;
-
-            if (!cursor) break;
-        } while (cursor);
-
-        return { cids, cursor };
+        return await this.listHelper(
+            params.limit,
+            'cids',
+            async (cursor, limit) => await this.query('com.atproto.sync.listBlobs', {
+                did: params.did,
+                limit,
+                cursor
+            }),
+            output => output.cids,
+            (a, b) => a == b,
+        );
     }
 
     async paginatedListRepos(params: {
         did: At.DID,
         limit?: number;
     }) {
-        const PER_PAGE = 1000;
-
-        const repos: ComAtprotoSyncListRepos.Repo[] = [];
-
-        let limit = params.limit;
-
-        let cursor: string | undefined = undefined;
-        do {
-            const data: ComAtprotoSyncListRepos.Output
-                = await this.query('com.atproto.sync.listRepos', {
-                    limit: limit === undefined
-                        ? PER_PAGE
-                        : limit / PER_PAGE > 1
-                            ? PER_PAGE
-                            : limit,
-                    cursor
-                });
-
-            if (!data.repos.length ||
-                data.repos.every(
-                    e => repos.find(e1 => e1.did == e.did)
-                )
-            ) {
-                break;
-            }
-
-            if (limit !== undefined) {
-                limit -= data.repos.length;
-            }
-
-            repos.push(...data.repos);
-
-            cursor = data.cursor;
-
-            if (!cursor) break;
-        } while (cursor);
-
-        return { repos, cursor };
+        return await this.listHelper(
+            params.limit,
+            'repos',
+            async (cursor, limit) => await this.query('com.atproto.sync.listRepos', {
+                limit,
+                cursor
+            }),
+            output => output.repos,
+            (a, b) => a.did == b.did,
+        );
     }
 
     async batchWrite(params: ComAtprotoRepoApplyWrites.Input) {
