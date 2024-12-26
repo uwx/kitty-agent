@@ -3,7 +3,8 @@
   "type": "module",
   "version": "1.1.2",
   "description": "Helpers for @atcute/client",
-  "main": "src/index.js",
+  "main": "out/index.js",
+  "types": "out/index.d.ts",
   "scripts": {
     "build": "tsc"
   },
