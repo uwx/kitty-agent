@@ -26,20 +26,20 @@ import type { At } from "@atcute/client/lexicons";
 /**
  * DID document
  */
-interface DidDocument {
-	id: string;
-	alsoKnownAs?: string[];
-	verificationMethod?: Array<{
-		id: string;
-		type: string;
-		controller: string;
-		publicKeyMultibase?: string;
-	}>;
-	service?: Array<{
-		id: string;
-		type: string;
-		serviceEndpoint: string | Record<string, unknown>;
-	}>;
+export interface DidDocument {
+    id: string;
+    alsoKnownAs?: string[];
+    verificationMethod?: Array<{
+        id: string;
+        type: string;
+        controller: string;
+        publicKeyMultibase?: string;
+    }>;
+    service?: Array<{
+        id: string;
+        type: string;
+        serviceEndpoint: string | Record<string, unknown>;
+    }>;
 }
 
 /**
@@ -133,4 +133,14 @@ export async function getDidDocument(did: At.DID): Promise<DidDocument> {
     }
 
     return doc;
+}
+
+export function getDid(didDoc: DidDocument): At.DID {
+    return didDoc.id as At.DID;
+}
+
+export function getHandle(didDoc: DidDocument) {
+    return didDoc.alsoKnownAs
+        ?.find(handle => handle.startsWith('at://'))
+        ?.slice('at://'.length);
 }
