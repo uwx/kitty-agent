@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@atcute/cid':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@atcute/client':
         specifier: ^2.0.6
         version: 2.0.6
@@ -17,16 +20,42 @@ importers:
 
 packages:
 
+  '@atcute/cid@2.1.0':
+    resolution: {integrity: sha512-Twsf5OKGk6QEqU1Z74feo1eRmnznYFzdCxtCISCutedCL2I2eGzD1F7JZRA+heTp5kgV5Bwvxvjn7VkGQhq3Sg==}
+
   '@atcute/client@2.0.6':
     resolution: {integrity: sha512-mhdqEicGUx0s5HTFOLpz91rcLS9j/g63de0nmAqv7blhU3j+xBf4le54qr2YIXNfnReZI7EwLYLX/YIBez4LGA==}
+
+  '@atcute/multibase@1.1.1':
+    resolution: {integrity: sha512-3HAlVjVB8HSVO2BL7H1e5lsVAtcMR+tEjgfbFqYqt3cCFY3LbIYL7f6FJpB35fYjupiPOCyRWlFL1cwAAurmzA==}
 
   '@atcute/oauth-browser-client@1.0.9':
     resolution: {integrity: sha512-7B4cBm9x/S6gtBgxPktCT6GY8GUze6XlCGUASqppU+bh6x5Z3QtfpPCg4jpd+bagzCdqpgb4VNhmCLcVqoO++g==}
 
+  '@atcute/uint8array@1.0.1':
+    resolution: {integrity: sha512-AAnlFKyfDRgb9GNZJbhQ6OuMhbmNPirQyapb8KnmcEhxQZ3+tt+4NcwqekEegY4MpNqSTYeeTdyxq0wGZv1JHg==}
+
+  '@atcute/varint@1.0.2':
+    resolution: {integrity: sha512-0O31hePzzr4O3NGWHUKKOyta6CGSL+AtN8iir8grGxu9jXyI7DBARlw6PbgKA6uTAvsXdpmRmF8MX+p0TsLnNg==}
+
 snapshots:
 
+  '@atcute/cid@2.1.0':
+    dependencies:
+      '@atcute/multibase': 1.1.1
+      '@atcute/uint8array': 1.0.1
+      '@atcute/varint': 1.0.2
+
   '@atcute/client@2.0.6': {}
+
+  '@atcute/multibase@1.1.1':
+    dependencies:
+      '@atcute/uint8array': 1.0.1
 
   '@atcute/oauth-browser-client@1.0.9':
     dependencies:
       '@atcute/client': 2.0.6
+
+  '@atcute/uint8array@1.0.1': {}
+
+  '@atcute/varint@1.0.2': {}
