@@ -265,13 +265,12 @@ export class StatefulOAuthClient<TClient> extends OAuthClient {
             return true;
         }
 
+        const { did, pds } = await getDidAndPds(handle);
+        this._account.set({ did, pds, handle });
+
         const oauthAgent = await this.oauthAuthenticateOrRefresh(handle, refreshOnly);
         if (oauthAgent === undefined) return false;
 
-        const { did, pds } = await getDidAndPds(handle);
-    
-        this._account.set({ did, pds, handle });
-    
         const agent = new KittyAgent({ handler: oauthAgent });
         this._agent.set(agent);
         this._client.set(this.createClient({ did, pds, handle, agent }));
