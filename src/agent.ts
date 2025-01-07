@@ -6,15 +6,15 @@ import type { At, ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtpr
 interface GetRecordParams<K extends keyof Records> extends ComAtprotoRepoGetRecord.Params { collection: K; }
 interface GetRecordOutput<K extends keyof Records> extends ComAtprotoRepoGetRecord.Output { value: Records[K]; }
 
-interface PutRecordParams<K extends keyof Records> extends ComAtprotoRepoPutRecord.Input { collection: K; record: Records[K]; }
-interface PutRecordOutput<K extends keyof Records> extends ComAtprotoRepoPutRecord.Output { }
+interface PutRecordInput<K extends keyof Records> extends ComAtprotoRepoPutRecord.Input { collection: K; record: Records[K]; }
 
-interface CreateRecordParams<K extends keyof Records> extends ComAtprotoRepoCreateRecord.Input { collection: K; record: Records[K]; }
-interface CreateRecordOutput<K extends keyof Records> extends ComAtprotoRepoCreateRecord.Output { }
+interface CreateRecordInput<K extends keyof Records> extends ComAtprotoRepoCreateRecord.Input { collection: K; record: Records[K]; }
 
 interface ListRecordsParams<K extends keyof Records> extends ComAtprotoRepoListRecords.Params { collection: K; }
 interface ListRecordsOutput<K extends keyof Records> extends ComAtprotoRepoListRecords.Output { records: ListRecordsRecord<K>[]; }
 interface ListRecordsRecord<K extends keyof Records> extends ComAtprotoRepoListRecords.Record { value: Records[K]; }
+
+interface DeleteRecordInput<K extends keyof Records> extends ComAtprotoRepoDeleteRecord.Input { collection: K; }
 
 export function isInvalidSwapError(err: unknown) {
     return err instanceof XRPCError && err.kind === 'InvalidSwap';
@@ -149,10 +149,10 @@ export class KittyAgent<X extends XRPC = XRPC> {
         return data as ListRecordsOutput<K>;
     }
 
-    async put<K extends keyof Records>(params: PutRecordParams<K>) {
+    async put<K extends keyof Records>(params: PutRecordInput<K>) {
         const data = await this.call('com.atproto.repo.putRecord', params);
 
-        return data as PutRecordOutput<K>;
+        return data;
     }
 
     async uploadBlob(buf: Uint8Array | Blob) {
@@ -161,7 +161,7 @@ export class KittyAgent<X extends XRPC = XRPC> {
         return data.blob;
     }
 
-    async trySwap<K extends keyof Records>(params: PutRecordParams<K>) {
+    async trySwap<K extends keyof Records>(params: PutRecordInput<K>) {
         try {
             await this.put(params);
             return true;
@@ -173,13 +173,13 @@ export class KittyAgent<X extends XRPC = XRPC> {
         }
     }
 
-    async create<K extends keyof Records>(params: CreateRecordParams<K>) {
+    async create<K extends keyof Records>(params: CreateRecordInput<K>) {
         const data = await this.call('com.atproto.repo.createRecord', params);
 
-        return data as CreateRecordOutput<K>;
+        return data;
     }
 
-    async delete(params: ComAtprotoRepoDeleteRecord.Input) {
+    async delete<K extends keyof Records>(params: DeleteRecordInput<K>) {
         const data = await this.call('com.atproto.repo.deleteRecord', params);
 
         return data;
