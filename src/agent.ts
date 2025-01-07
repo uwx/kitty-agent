@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-import { simpleFetchHandler, XRPC, XRPCError, type XRPCOptions, type XRPCRequestOptions, type XRPCResponse } from "@atcute/client";
+import { CredentialManager, simpleFetchHandler, XRPC, XRPCError, type XRPCOptions, type XRPCRequestOptions, type XRPCResponse } from "@atcute/client";
 import type { At, Brand, ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob, ComAtprotoSyncListBlobs, ComAtprotoSyncListRepos, Procedures, Queries, Records } from "@atcute/client/lexicons";
 import { AtUri } from "@atproto/syntax";
+import { type DidDocument, getDid, getDidDocument, getHandle, getPdsEndpoint } from "./handles/did-document.js";
 
 interface GetRecordParams<K extends keyof Records> extends ComAtprotoRepoGetRecord.Params { collection: K; }
 interface ListRecordsParams<K extends keyof Records> extends ComAtprotoRepoListRecords.Params { collection: K; }
@@ -89,6 +90,13 @@ type DataThenParams<T>
             ? [data: undefined, params: W]
             : [];
 
+export interface ActorInfo<X extends XRPC = XRPC> {
+    pdsEndpoint?: string;
+    did: At.DID;
+    handle?: string;
+    pdsAgent: KittyAgent<X>;
+}
+            
 export class KittyAgent<X extends XRPC = XRPC> {
     public readonly xrpc: X;
 
@@ -338,5 +346,35 @@ export class KittyAgent<X extends XRPC = XRPC> {
         });
 
         return did;
+    }
+
+    async getActorInfo(didOrHandle: string): Promise<ActorInfo> {
+        const didDoc = didOrHandle.startsWith('did:')
+            ? await getDidDocument(didOrHandle as At.DID)
+            : await this.query('com.atproto.repo.describeRepo', { repo: didOrHandle })
+                .then(response => response.didDoc as DidDocument | undefined);
+
+        const pdsEndpoint = didDoc ? getPdsEndpoint(didDoc) : undefined;
+        let did = didDoc ? getDid(didDoc) : undefined;
+        const handle = didDoc ? getHandle(didDoc) : undefined;
+
+        if (!did) {
+            const didResponse = !didOrHandle.startsWith('did:')
+                ? await this.query('com.atproto.identity.resolveHandle', { handle: didOrHandle })
+                : { did: handle as At.DID };
+
+            did = didResponse.did;
+        }
+
+        const pdsAgent = pdsEndpoint
+            ? new KittyAgent({ handler: new CredentialManager({ service: pdsEndpoint }) })
+            : this;
+
+        return {
+            pdsEndpoint,
+            did,
+            handle,
+            pdsAgent
+        };
     }
 }
