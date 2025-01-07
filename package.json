@@ -17,11 +17,13 @@
   "devDependencies": {
     "@atcute/cid": "^2.1.0",
     "@atcute/client": "^2.0.6",
-    "@atcute/oauth-browser-client": "^1.0.9"
+    "@atcute/oauth-browser-client": "^1.0.9",
+    "@atproto/syntax": "^0.3.1"
   },
   "peerDependencies": {
     "@atcute/cid": "^2.1.0",
     "@atcute/client": "^2.0.6",
-    "@atcute/oauth-browser-client": "^1.0.9"
+    "@atcute/oauth-browser-client": "^1.0.9",
+    "@atproto/syntax": "^0.3.1"
   }
 }

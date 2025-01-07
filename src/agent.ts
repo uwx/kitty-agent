@@ -1,20 +1,28 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
 import { simpleFetchHandler, XRPC, XRPCError, type XRPCOptions, type XRPCRequestOptions, type XRPCResponse } from "@atcute/client";
-import type { At, ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob, ComAtprotoSyncListBlobs, ComAtprotoSyncListRepos, Procedures, Queries, Records } from "@atcute/client/lexicons";
+import type { At, Brand, ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob, ComAtprotoSyncListBlobs, ComAtprotoSyncListRepos, Procedures, Queries, Records } from "@atcute/client/lexicons";
+import { AtUri } from "@atproto/syntax";
 
 interface GetRecordParams<K extends keyof Records> extends ComAtprotoRepoGetRecord.Params { collection: K; }
-interface GetRecordOutput<K extends keyof Records> extends ComAtprotoRepoGetRecord.Output { value: Records[K]; }
-
-interface PutRecordInput<K extends keyof Records> extends ComAtprotoRepoPutRecord.Input { collection: K; record: Records[K]; }
-
-interface CreateRecordInput<K extends keyof Records> extends ComAtprotoRepoCreateRecord.Input { collection: K; record: Records[K]; }
-
 interface ListRecordsParams<K extends keyof Records> extends ComAtprotoRepoListRecords.Params { collection: K; }
-interface ListRecordsOutput<K extends keyof Records> extends ComAtprotoRepoListRecords.Output { records: ListRecordsRecord<K>[]; }
-interface ListRecordsRecord<K extends keyof Records> extends ComAtprotoRepoListRecords.Record { value: Records[K]; }
-
+interface PutRecordInput<K extends keyof Records> extends ComAtprotoRepoPutRecord.Input { collection: K; record: Records[K]; }
+interface CreateRecordInput<K extends keyof Records> extends ComAtprotoRepoCreateRecord.Input { collection: K; record: Records[K]; }
 interface DeleteRecordInput<K extends keyof Records> extends ComAtprotoRepoDeleteRecord.Input { collection: K; }
+
+interface GetRecordOutput<K extends keyof Records> {
+    cid?: At.CID;
+    uri: AtUri;
+    value: Records[K];
+}
+
+interface ListRecordsOutput<K extends keyof Records> {
+    records: {
+        cid: At.CID;
+        uri: AtUri;
+        value: Records[K];
+    }[];
+}
 
 export function isInvalidSwapError(err: unknown) {
     return err instanceof XRPCError && err.kind === 'InvalidSwap';
@@ -22,6 +30,38 @@ export function isInvalidSwapError(err: unknown) {
 
 export function isRecordNotFoundError(err: unknown) {
     return err instanceof XRPCError && err.kind === 'RecordNotFound';
+}
+
+interface Record {
+    uri: At.Uri;
+    value: unknown;
+}
+type TypedRecord<K extends keyof Records, R extends Record = Record> = Omit<R, keyof Record> & {
+    readonly uri: AtUri;
+    value: Records[K];
+};
+
+function makeRecordTyped<K extends keyof Records, R extends Record>(record: R): TypedRecord<K, R> {
+    let memoizedAtUri: AtUri | undefined;
+    const uri = record.uri; // closure variable
+    return {
+        ...record,
+        value: record.value as Records[K],
+        get uri() {
+            return memoizedAtUri ??= new AtUri(uri);
+        }
+    };
+}
+
+function makeRecordsTyped<
+    K extends keyof Records,
+    R extends Record = Record,
+    T extends { records: R[] } = { records: R[] },
+>(value: T): Omit<T, 'records'> & { records: TypedRecord<K, R>[] } {
+    return {
+        ...value,
+        records: value.records.map(makeRecordTyped)
+    };
 }
 
 type OutputOf<T> = T extends { output: infer U; } ? U : void;
@@ -87,10 +127,10 @@ export class KittyAgent<X extends XRPC = XRPC> {
         return outData;
     }
 
-    async get<K extends keyof Records>(params: GetRecordParams<K>) {
-        const data = await this.query('com.atproto.repo.getRecord', params);
+    async get<K extends keyof Records>(params: GetRecordParams<K>): Promise<GetRecordOutput<K>> {
+        const data = makeRecordTyped<K, ComAtprotoRepoGetRecord.Output>(await this.query('com.atproto.repo.getRecord', params));
 
-        return data as GetRecordOutput<K>;
+        return data;
     }
 
     async getBlob(params: ComAtprotoSyncGetBlob.Params | { did: At.DID, cid: At.Blob }): Promise<Uint8Array | string> {
@@ -143,10 +183,10 @@ export class KittyAgent<X extends XRPC = XRPC> {
         }
     }
 
-    async list<K extends keyof Records>(params: ListRecordsParams<K>) {
-        const data = await this.query('com.atproto.repo.listRecords', params);
+    async list<K extends keyof Records>(params: ListRecordsParams<K>): Promise<ListRecordsOutput<K>> {
+        const data = makeRecordsTyped<K, ComAtprotoRepoListRecords.Record>(await this.query('com.atproto.repo.listRecords', params));
 
-        return data as ListRecordsOutput<K>;
+        return data;
     }
 
     async put<K extends keyof Records>(params: PutRecordInput<K>) {
@@ -236,7 +276,7 @@ export class KittyAgent<X extends XRPC = XRPC> {
         reverse?: boolean,
         limit?: number;
     }): Promise<ListRecordsOutput<K>> {
-        return await this.paginationHelper(
+        const data = makeRecordsTyped<K, ComAtprotoRepoListRecords.Record>(await this.paginationHelper(
             params.limit,
             'records',
             async (cursor, limit) => await this.query('com.atproto.repo.listRecords', {
@@ -248,7 +288,9 @@ export class KittyAgent<X extends XRPC = XRPC> {
             }),
             output => output.records,
             (a, b) => a.uri === b.uri,
-        ) as ListRecordsOutput<K>;
+        ));
+
+        return data as ListRecordsOutput<K>;
     }
 
     async paginatedListBlobs(params: {

@@ -17,6 +17,9 @@ importers:
       '@atcute/oauth-browser-client':
         specifier: ^1.0.9
         version: 1.0.9
+      '@atproto/syntax':
+        specifier: ^0.3.1
+        version: 0.3.1
 
 packages:
 
@@ -37,6 +40,9 @@ packages:
 
   '@atcute/varint@1.0.2':
     resolution: {integrity: sha512-0O31hePzzr4O3NGWHUKKOyta6CGSL+AtN8iir8grGxu9jXyI7DBARlw6PbgKA6uTAvsXdpmRmF8MX+p0TsLnNg==}
+
+  '@atproto/syntax@0.3.1':
+    resolution: {integrity: sha512-fzW0Mg1QUOVCWUD3RgEsDt6d1OZ6DdFmbKcDdbzUfh0t4rhtRAC05KbZYmxuMPWDAiJ4BbbQ5dkAc/mNypMXkw==}
 
 snapshots:
 
@@ -59,3 +65,5 @@ snapshots:
   '@atcute/uint8array@1.0.1': {}
 
   '@atcute/varint@1.0.2': {}
+
+  '@atproto/syntax@0.3.1': {}
