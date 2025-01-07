@@ -13,11 +13,14 @@ function s64encode(i: number): string {
 }
 
 let lastTimestamp = 0;
-const EPOCH = 1735689600000; // Wed, 01 Jan 2025 00:00:00 GMT
+const EPOCH = 1735689600000; // Wed, 01 Jan 2025 00:00:00 GMT, in Unix milliseconds
 
 /**
  * Short rkey-compatible ID composed of 53-bit millisecond-precise monotonically increasing timestamp (see EPOCH) and
- * 10-bit random clock ID, serialized into a base-64 alphabet.
+ * 10-bit random clock ID, serialized into the base64url alphabet.
+ * 
+ * Format: clock_id (10-bit integer encoded to base64url, padded to length 2 with 'A') || timestamp_millis (53-bit
+ * integer encoded to base64url)
  */
 // biome-ignore lint/complexity/noStaticOnlyClass: By design
 export class ShortId {
