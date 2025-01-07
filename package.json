@@ -1,7 +1,7 @@
 {
   "name": "kitty-agent",
   "type": "module",
-  "version": "7.0.0",
+  "version": "7.0.1",
   "description": "Helpers for @atcute/client",
   "main": "out/index.js",
   "types": "out/index.d.ts",
