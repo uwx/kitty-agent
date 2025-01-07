@@ -268,6 +268,8 @@ export class StatefulOAuthClient<TClient> extends OAuthClient {
         const { did, pds } = await getDidAndPds(handle);
         this._account.set({ did, pds, handle });
 
+        console.log(`set account: ${this._account.get()}`)
+
         const oauthAgent = await this.oauthAuthenticateOrRefresh(handle, refreshOnly);
         if (oauthAgent === undefined) return false;
 
