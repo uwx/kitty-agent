@@ -11,12 +11,22 @@ importers:
       '@atcute/client':
         specifier: ^2.0.6
         version: 2.0.6
+      '@atcute/oauth-browser-client':
+        specifier: ^1.0.9
+        version: 1.0.9
 
 packages:
 
   '@atcute/client@2.0.6':
     resolution: {integrity: sha512-mhdqEicGUx0s5HTFOLpz91rcLS9j/g63de0nmAqv7blhU3j+xBf4le54qr2YIXNfnReZI7EwLYLX/YIBez4LGA==}
 
+  '@atcute/oauth-browser-client@1.0.9':
+    resolution: {integrity: sha512-7B4cBm9x/S6gtBgxPktCT6GY8GUze6XlCGUASqppU+bh6x5Z3QtfpPCg4jpd+bagzCdqpgb4VNhmCLcVqoO++g==}
+
 snapshots:
 
   '@atcute/client@2.0.6': {}
+
+  '@atcute/oauth-browser-client@1.0.9':
+    dependencies:
+      '@atcute/client': 2.0.6

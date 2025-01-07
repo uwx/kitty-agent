@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-import { XRPC, XRPCError, type XRPCOptions, type XRPCRequestOptions, type XRPCResponse } from "@atcute/client";
+import { simpleFetchHandler, XRPC, XRPCError, type XRPCOptions, type XRPCRequestOptions, type XRPCResponse } from "@atcute/client";
 import type { At, ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob, ComAtprotoSyncListBlobs, ComAtprotoSyncListRepos, Procedures, Queries, Records } from "@atcute/client/lexicons";
 
 interface GetRecordParams<K extends keyof Records> extends ComAtprotoRepoGetRecord.Params { collection: K; }
@@ -56,6 +56,10 @@ export class KittyAgent<X extends XRPC = XRPC> {
         this.xrpc = opts instanceof XRPC ? opts as X : new XRPC(opts) as X;
     }
 
+    static createUnauthed(service = 'https://bsky.social'): KittyAgent {
+        return new KittyAgent({ handler: simpleFetchHandler({ service }) })
+    }
+
     /** Makes a request to the XRPC service */
     async request(options: XRPCRequestOptions): Promise<XRPCResponse> {
         return await this.xrpc.request(options);
@@ -89,7 +93,7 @@ export class KittyAgent<X extends XRPC = XRPC> {
         return data as GetRecordOutput<K>;
     }
 
-    async getBlob(params: ComAtprotoSyncGetBlob.Params | { did: At.DID, cid: At.Blob }): Promise<Uint8Array> {
+    async getBlob(params: ComAtprotoSyncGetBlob.Params | { did: At.DID, cid: At.Blob }): Promise<Uint8Array | string> {
         if (typeof params.cid !== 'string') {
             params = {
                 cid: params.cid.ref.$link as At.CID,
@@ -100,6 +104,30 @@ export class KittyAgent<X extends XRPC = XRPC> {
         const data = await this.query('com.atproto.sync.getBlob', params as ComAtprotoSyncGetBlob.Params);
 
         return data;
+    }
+
+    /**
+     * Atcute likes to return blobs as text sometimes. I don't know why yet. This returns them as binary if that
+     * happens.
+     */
+    async getBlobAsBinary(params: ComAtprotoSyncGetBlob.Params | { did: At.DID, cid: At.Blob }) {
+        let blob: string | Uint8Array = await this.getBlob(params);
+
+        if (typeof blob === 'string') blob = new TextEncoder().encode(blob);
+
+        return blob;
+    }
+    
+    /**
+     * Atcute likes to return blobs as text sometimes. I don't know why yet. This returns them as text no matter what,
+     * and also allows you to specify an encoding.
+     */
+    async getBlobAsText(params: ComAtprotoSyncGetBlob.Params | { did: At.DID, cid: At.Blob }, encoding?: string) {
+        let blob: string | Uint8Array = await this.getBlob(params);
+
+        if (typeof blob !== 'string') blob = new TextDecoder(encoding).decode(blob);
+
+        return blob;
     }
 
     async tryGet<K extends keyof Records>(params: GetRecordParams<K>) {
