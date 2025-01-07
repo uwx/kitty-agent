@@ -49,7 +49,7 @@ export class ShortId {
         // while `performance.timeOrigin + performance.now()` could be used here, they
         // seem to have cross-browser differences, not sure on that yet.
 
-        const timestamp = Math.max(Date.now() * 1_000, lastTimestamp);
+        const timestamp = Math.max(Date.now(), lastTimestamp);
         lastTimestamp = timestamp + 1;
 
         return ShortId.createRaw(timestamp, Math.floor(Math.random() * 1023));
