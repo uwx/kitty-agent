@@ -76,7 +76,7 @@ export function getServiceEndpoint(
 }
 
 function validateUrl(urlStr: string): string | undefined {
-    let url;
+    let url: URL;
     try {
         url = new URL(urlStr);
     } catch {
@@ -103,9 +103,10 @@ export async function getDidDocument(did: At.DID): Promise<DidDocument> {
         const response = await fetch(`https://plc.directory/${did}`);
 
         if (response.status === 404) {
-            throw new Error(`did not found in directory`);
-        } else if (!response.ok) {
-            throw new Error(`directory is unreachable`);
+            throw new Error('did not found in directory');
+        }
+        if (!response.ok) {
+            throw new Error('directory is unreachable');
         }
 
         const json = await response.json();
@@ -115,20 +116,20 @@ export async function getDidDocument(did: At.DID): Promise<DidDocument> {
         const DID_WEB_RE = /^([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*(?:\.[a-zA-Z]{2,}))$/;
 
         if (!DID_WEB_RE.test(ident)) {
-            throw new Error(`invalid identifier`);
+            throw new Error('invalid identifier');
         }
 
         const response = await fetch(`https://${ident}/.well-known/did.json`);
 
         if (!response.ok) {
-            throw new Error(`did document is unreachable`);
+            throw new Error('did document is unreachable');
         }
 
         const json = await response.json();
 
         doc = json as DidDocument;
     } else {
-        throw new Error(`unsupported did method`);
+        throw new Error('unsupported did method');
     }
 
     return doc;

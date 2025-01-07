@@ -235,7 +235,7 @@ export class StatefulOAuthClient<TClient> extends OAuthClient {
     }
 
     private useLocalStorage<T>(key: string, initialValue: T, options: { deserializer: (raw: any) => any, serializer: (value: any) => any }): WritableEx<T> {
-        let value = this.writable(initialValue);
+        const value = this.writable(initialValue);
         if (key in localStorage) {
             value.set(options.deserializer(localStorage[key]));
         }

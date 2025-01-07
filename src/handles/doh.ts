@@ -25,7 +25,7 @@ export const resolveHandleViaDoH = async (handle: string): Promise<At.DID> => {
 	}
 
 	if (type !== 'application/dns-json') {
-		throw new Error(`unexpected response from DoH server`);
+		throw new Error('unexpected response from DoH server');
 	}
 
 	const result = asResult(await response.json());
@@ -69,7 +69,7 @@ const isResult = (result: unknown): result is Result => {
 };
 const asResult = (result: unknown): Result => {
 	if (!isResult(result)) {
-		throw new TypeError(`unexpected DoH response`);
+		throw new TypeError('unexpected DoH response');
 	}
 
 	return result;

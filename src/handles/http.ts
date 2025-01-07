@@ -6,7 +6,7 @@ export const resolveHandleViaHttp = async (handle: string): Promise<At.DID> => {
 
 	const response = await fetch(url, { redirect: 'error' });
 	if (!response.ok) {
-		throw new Error(`domain is unreachable`);
+		throw new Error('domain is unreachable');
 	}
 
 	const text = await response.text();
