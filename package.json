@@ -11,6 +11,20 @@
   "files": [
     "out"
   ],
+  "exports": {
+    ".": {
+      "default": "./out/index.js",
+      "types": "./out/index.d.ts"
+    },
+    "./oauth-svelte": {
+      "default": "./out/oauth-svelte.js",
+      "types": "./out/oauth-svelte.d.ts"
+    },
+    "./oauth-solidjs": {
+      "default": "./out/oauth-solidjs.js",
+      "types": "./out/oauth-solidjs.d.ts"
+    }
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
