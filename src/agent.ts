@@ -3,8 +3,8 @@
 import { CredentialManager, simpleFetchHandler, XRPC, XRPCError, type XRPCOptions, type XRPCRequestOptions, type XRPCResponse } from "@atcute/client";
 import type { At, Brand, ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob, ComAtprotoSyncListBlobs, ComAtprotoSyncListRepos, Procedures, Queries, Records } from "@atcute/client/lexicons";
 import { AtUri } from "@atproto/syntax";
-import { type DidDocument, getDid, getDidDocument, getHandle, getPdsEndpoint } from "./handles/did-document.js";
 import { getDidAndPds } from "./pds-helpers.js";
+import { resolveHandleAnonymously } from "./handles/resolve.js";
 
 interface GetRecordParams<K extends keyof Records> extends ComAtprotoRepoGetRecord.Params { collection: K; }
 interface ListRecordsParams<K extends keyof Records> extends ComAtprotoRepoListRecords.Params { collection: K; }
@@ -107,7 +107,9 @@ export class KittyAgent<X extends XRPC = XRPC> {
     }
 
     private static readonly pdsAgentCache = new Map<At.DID, KittyAgent>();
-    static async getOrCreatePds(did: At.DID) {
+    static async getOrCreatePds(handleOrDid: string) {
+        const did = await resolveHandleAnonymously(handleOrDid);
+
         const existingAgent = KittyAgent.pdsAgentCache.get(did);
         if (existingAgent) return existingAgent;
 
