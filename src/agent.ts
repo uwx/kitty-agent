@@ -4,6 +4,7 @@ import { CredentialManager, simpleFetchHandler, XRPC, XRPCError, type XRPCOption
 import type { At, Brand, ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob, ComAtprotoSyncListBlobs, ComAtprotoSyncListRepos, Procedures, Queries, Records } from "@atcute/client/lexicons";
 import { AtUri } from "@atproto/syntax";
 import { type DidDocument, getDid, getDidDocument, getHandle, getPdsEndpoint } from "./handles/did-document.js";
+import { getDidAndPds } from "./pds-helpers.js";
 
 interface GetRecordParams<K extends keyof Records> extends ComAtprotoRepoGetRecord.Params { collection: K; }
 interface ListRecordsParams<K extends keyof Records> extends ComAtprotoRepoListRecords.Params { collection: K; }
@@ -105,7 +106,23 @@ export class KittyAgent<X extends XRPC = XRPC> {
     }
 
     static createUnauthed(service = 'https://bsky.social'): KittyAgent {
-        return new KittyAgent({ handler: simpleFetchHandler({ service }) })
+        return new KittyAgent({ handler: simpleFetchHandler({ service }) });
+    }
+
+    static createAppview(service = 'https://api.bsky.app'): KittyAgent {
+        return new KittyAgent({ handler: simpleFetchHandler({ service }) });
+    }
+
+    private static readonly pdsAgentCache = new Map<At.DID, KittyAgent>();
+    static async getOrCreatePds(did: At.DID) {
+        const existingAgent = KittyAgent.pdsAgentCache.get(did);
+        if (existingAgent) return existingAgent;
+
+        const didAndPds = await getDidAndPds(did);
+        const agent = KittyAgent.createUnauthed(didAndPds.pds);
+
+        KittyAgent.pdsAgentCache.set(did, agent);
+        return agent;
     }
 
     /** Makes a request to the XRPC service */
