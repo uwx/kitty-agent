@@ -98,15 +98,25 @@ export class KittyAgent<X extends XRPC = XRPC> {
         this.xrpc = opts instanceof XRPC ? opts as X : new XRPC(opts) as X;
     }
 
+    /**
+     * Gets a read-only client for bsky.social PDSes.
+     */
     static createUnauthed(service = 'https://bsky.social'): KittyAgent {
         return new KittyAgent({ handler: simpleFetchHandler({ service }) });
     }
 
+    /**
+     * Gets a read-only client for the Bluesky AppView.
+     */
     static createAppview(service = 'https://api.bsky.app'): KittyAgent {
         return new KittyAgent({ handler: simpleFetchHandler({ service }) });
     }
 
     private static readonly pdsAgentCache = new Map<At.DID, KittyAgent>();
+
+    /**
+     * Gets a read-only client for the PDS hosting a specific account via handle or DID.
+     */
     static async getOrCreatePds(handleOrDid: string) {
         const did = await resolveHandleAnonymously(handleOrDid);
 
@@ -118,6 +128,18 @@ export class KittyAgent<X extends XRPC = XRPC> {
 
         KittyAgent.pdsAgentCache.set(did, agent);
         return agent;
+    }
+
+    /**
+     * Gets an authenticated client for the PDS hosting a specific account via handle or DID.
+     */
+    static async createPdsWithCredentials(handleOrDid: string) {
+        const { did, pds } = await getDidAndPds(handleOrDid);
+        
+        const manager = new CredentialManager({ service: pds });
+        const agent = new KittyAgent({ handler: manager });
+
+        return { did, manager, agent };
     }
 
     /** Makes a request to the XRPC service */
