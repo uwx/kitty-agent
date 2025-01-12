@@ -6,58 +6,58 @@ import type { Store } from "./oauth-svelte.js";
 
 namespace Signals {
     export type OnEffectFunction<S, Prev, Next extends Prev = Prev> = (
-      input: S,
-      prevInput: S | undefined,
-      prev: Prev
+        input: S,
+        prevInput: S | undefined,
+        prev: Prev
     ) => Next;
     export type EffectFunction<Prev, Next extends Prev = Prev> = (v: Prev) => Next;
     export interface OnOptions {
-      defer?: boolean;
+        defer?: boolean;
     }
     export interface BaseOptions {
-      name?: string;
+        name?: string;
     }
-    export interface EffectOptions extends BaseOptions {}
+    export interface EffectOptions extends BaseOptions { }
     export interface MemoOptions<T> extends EffectOptions {
-      equals?: false | ((prev: T, next: T) => boolean);
+        equals?: false | ((prev: T, next: T) => boolean);
     }
     export type Accessor<T> = () => T;
     export type Setter<in out T> = {
-    <U extends T>(
-        ...args: undefined extends T ? [] : [value: Exclude<U, Function> | ((prev: T) => U)]
-    ): undefined extends T ? undefined : U;
-    <U extends T>(value: (prev: T) => U): U;
-    <U extends T>(value: Exclude<U, Function>): U;
-    <U extends T>(value: Exclude<U, Function> | ((prev: T) => U)): U;
+        <U extends T>(
+            ...args: undefined extends T ? [] : [value: Exclude<U, Function> | ((prev: T) => U)]
+        ): undefined extends T ? undefined : U;
+        <U extends T>(value: (prev: T) => U): U;
+        <U extends T>(value: Exclude<U, Function>): U;
+        <U extends T>(value: Exclude<U, Function> | ((prev: T) => U)): U;
     };
     export type Signal<T> = [get: Accessor<T>, set: Setter<T>];
     export interface SignalOptions<T> extends MemoOptions<T> {
-    internal?: boolean;
+        internal?: boolean;
     }
 
     export type ReturnTypes<T> = T extends readonly Accessor<unknown>[]
-      ? {
-          [K in keyof T]: T[K] extends Accessor<infer I> ? I : never;
+        ? {
+            [K in keyof T]: T[K] extends Accessor<infer I> ? I : never;
         }
-      : T extends Accessor<infer I>
-      ? I
-      : never;
+        : T extends Accessor<infer I>
+        ? I
+        : never;
     export type AccessorArray<T> = [
-      ...Extract<
-        {
-          [K in keyof T]: Accessor<T[K]>;
-        },
-        readonly unknown[]
-      >
+        ...Extract<
+            {
+                [K in keyof T]: Accessor<T[K]>;
+            },
+            readonly unknown[]
+        >
     ];
 
     export declare function on<S, Next extends Prev, Prev = Next>(
         deps: AccessorArray<S> | Accessor<S>,
         fn: OnEffectFunction<S, undefined | NoInfer<Prev>, Next>,
         options?: OnOptions & {
-          defer?: false;
+            defer?: false;
         }
-      ): EffectFunction<undefined | NoInfer<Next>, NoInfer<Next>>;      
+    ): EffectFunction<undefined | NoInfer<Next>, NoInfer<Next>>;
 }
 
 // biome-ignore lint/suspicious/noConstEnum: This enum is never exported
@@ -122,7 +122,7 @@ export class StatefulSolidOAuthClient<TClient> extends BaseStatefulOAuthClient<T
 
             return [get, set] as Signals.Signal<T>;
         }
-        
+
         this._account = useLocalStorage<Account | undefined>('user', undefined, {
             deserializer(raw) { return raw === 'null' ? undefined : JSON.parse(raw); },
             serializer(value) { return value === undefined ? 'null' : JSON.stringify(value); },
