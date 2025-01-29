@@ -9,7 +9,10 @@
     "build": "tsc"
   },
   "files": [
-    "out"
+    "out",
+    "LICENSE.nanostores.md",
+    "LICENSE.solidjs.md",
+    "LICENSE.svelte.md"
   ],
   "exports": {
     ".": {
@@ -23,6 +26,10 @@
     "./oauth-solidjs": {
       "default": "./out/oauth-solidjs.js",
       "types": "./out/oauth-solidjs.d.ts"
+    },
+    "./oauth-nanostores": {
+      "default": "./out/oauth-nanostores.js",
+      "types": "./out/oauth-nanostores.d.ts"
     }
   },
   "keywords": [],
