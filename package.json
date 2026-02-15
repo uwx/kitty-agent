@@ -30,6 +30,10 @@
     "./oauth-nanostores": {
       "default": "./out/oauth-nanostores.js",
       "types": "./out/oauth-nanostores.d.ts"
+    },
+    "./oauth-preact": {
+      "default": "./out/oauth-preact.js",
+      "types": "./out/oauth-preact.d.ts"
     }
   },
   "keywords": [],
