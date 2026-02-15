@@ -6,7 +6,7 @@
   "main": "out/index.js",
   "types": "out/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "pnpm --package=typescript dlx tsc"
   },
   "files": [
     "out",
