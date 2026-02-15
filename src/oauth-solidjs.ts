@@ -75,10 +75,10 @@ export class StatefulSolidOAuthClient<TClient> extends BaseStatefulOAuthClient<T
 
     protected get internal_account(): Account | undefined { return this._account[SignalAccess.Read](); }
     protected get internal_user(): LoginState<TClient> | undefined { return this.user(); }
-    protected get internal_agent(): KittyAgent<Client> | undefined { return this._agent[SignalAccess.Read](); }
+    protected get internal_agent(): KittyAgent | undefined { return this._agent[SignalAccess.Read](); }
     protected get internal_client(): TClient | undefined { return this._client[SignalAccess.Read](); }
     protected set internal_account(value: Account | undefined) { this._account[SignalAccess.Write](() => value); }
-    protected set internal_agent(value: KittyAgent<Client> | undefined) { this._agent[SignalAccess.Write](() => value); }
+    protected set internal_agent(value: KittyAgent | undefined) { this._agent[SignalAccess.Write](() => value); }
     protected set internal_client(value: TClient | undefined) { this._client[SignalAccess.Write](() => value); }
 
     constructor(

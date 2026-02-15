@@ -385,10 +385,10 @@ export class StatefulSvelteOAuthClient<TClient> extends BaseStatefulOAuthClient<
 
     protected get internal_account(): Account | undefined { return this._account.get(); }
     protected get internal_user(): LoginState<TClient> | undefined { return this.user.get(); }
-    protected get internal_agent(): KittyAgent<Client> | undefined { return this._agent.get(); }
+    protected get internal_agent(): KittyAgent | undefined { return this._agent.get(); }
     protected get internal_client(): TClient | undefined { return this._client.get(); }
     protected set internal_account(value: Account | undefined) { this._account.set(value); }
-    protected set internal_agent(value: KittyAgent<Client> | undefined) { this._agent.set(value); }
+    protected set internal_agent(value: KittyAgent | undefined) { this._agent.set(value); }
     protected set internal_client(value: TClient | undefined) { this._client.set(value); }
 
     constructor(
