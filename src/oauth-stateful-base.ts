@@ -1,11 +1,11 @@
-import type { At } from "@atcute/client/lexicons";
+import type { Did } from "@atcute/lexicons";
 import { KittyAgent } from "./agent.js";
 import { OAuthClient } from "./oauth.js";
 import { getDidAndPds } from "./pds-helpers.js";
 
 export interface LoginState<T> {
     readonly handle: string;
-    readonly did: At.DID;
+    readonly did: Did;
     readonly pds: string;
     readonly agent: KittyAgent;
     readonly client: T;
@@ -13,7 +13,7 @@ export interface LoginState<T> {
 
 export interface Account {
     handle: string;
-    did: At.DID;
+    did: Did;
     pds: string;
 }
 
@@ -26,7 +26,7 @@ export class LoginStateImpl<T> implements LoginState<T> {
     ) {}
 
     get handle(): string { return this.account.handle; }
-    get did(): At.DID { return this.account.did; }
+    get did(): Did { return this.account.did; }
     get pds(): string { return this.account.pds; }
 }
 
@@ -44,7 +44,7 @@ export abstract class BaseStatefulOAuthClient<TClient> extends OAuthClient {
         },
         private readonly createClient: (loginState: {
             readonly handle: string;
-            readonly did: At.DID;
+            readonly did: Did;
             readonly pds: string;
             readonly agent: KittyAgent;
         }) => TClient,
@@ -76,7 +76,7 @@ export abstract class BaseStatefulOAuthClient<TClient> extends OAuthClient {
 
         return true;
     }
-    
+
     revokeSessions() {
         super.revokeSessions();
         this.internal_account = undefined;
@@ -94,7 +94,7 @@ export abstract class BaseStatefulOAuthClient<TClient> extends OAuthClient {
                 }
             })();
         }
-    
+
         await this.initialSessionPromise;
     }
 

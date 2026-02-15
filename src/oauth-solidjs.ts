@@ -1,8 +1,7 @@
-import type { XRPC } from "@atcute/client";
-import type { At } from "@atcute/client/lexicons";
+import type { Client } from "@atcute/client";
+import type { Did } from "@atcute/lexicons";
 import type { KittyAgent } from "./agent.js";
 import { BaseStatefulOAuthClient, type Account, type LoginState, LoginStateImpl } from "./oauth-stateful-base.js";
-import type { Store } from "./oauth-svelte.js";
 
 namespace Signals {
     export type OnEffectFunction<S, Prev, Next extends Prev = Prev> = (
@@ -71,15 +70,15 @@ export class StatefulSolidOAuthClient<TClient> extends BaseStatefulOAuthClient<T
     get account(): Signals.Accessor<Account | undefined> { return this._account[SignalAccess.Read]; }
     readonly user: Signals.Accessor<LoginState<TClient> | undefined>;
     readonly handle: Signals.Accessor<string | undefined>;
-    readonly did: Signals.Accessor<At.DID | undefined>;
+    readonly did: Signals.Accessor<Did | undefined>;
     readonly pds: Signals.Accessor<string | undefined>;
 
     protected get internal_account(): Account | undefined { return this._account[SignalAccess.Read](); }
     protected get internal_user(): LoginState<TClient> | undefined { return this.user(); }
-    protected get internal_agent(): KittyAgent<XRPC> | undefined { return this._agent[SignalAccess.Read](); }
+    protected get internal_agent(): KittyAgent<Client> | undefined { return this._agent[SignalAccess.Read](); }
     protected get internal_client(): TClient | undefined { return this._client[SignalAccess.Read](); }
     protected set internal_account(value: Account | undefined) { this._account[SignalAccess.Write](() => value); }
-    protected set internal_agent(value: KittyAgent<XRPC> | undefined) { this._agent[SignalAccess.Write](() => value); }
+    protected set internal_agent(value: KittyAgent<Client> | undefined) { this._agent[SignalAccess.Write](() => value); }
     protected set internal_client(value: TClient | undefined) { this._client[SignalAccess.Write](() => value); }
 
     constructor(
@@ -103,7 +102,7 @@ export class StatefulSolidOAuthClient<TClient> extends BaseStatefulOAuthClient<T
         },
         createClient: (loginState: {
             readonly handle: string;
-            readonly did: At.DID;
+            readonly did: Did;
             readonly pds: string;
             readonly agent: KittyAgent;
         }) => TClient,

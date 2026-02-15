@@ -1,29 +1,43 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-import { CredentialManager, simpleFetchHandler, XRPC, XRPCError, type XRPCOptions, type XRPCRequestOptions, type XRPCResponse } from "@atcute/client";
-import type { At, Brand, ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob, ComAtprotoSyncListBlobs, ComAtprotoSyncListRepos, Procedures, Queries, Records } from "@atcute/client/lexicons";
+import { CredentialManager, simpleFetchHandler, Client, type ClientOptions, type CallRequestOptions, type ClientResponse, type ProcedureRequestOptions, type QueryRequestOptions } from "@atcute/client";
 import { AtUri } from "@atproto/syntax";
 import { getDidAndPds } from "./pds-helpers.js";
 import { resolveHandleAnonymously } from "./handles/resolve.js";
+import type { Records, XRPCProcedures, XRPCQueries } from "@atcute/lexicons/ambient";
+import type { XRPCQueryMetadata, XRPCProcedureMetadata } from "@atcute/lexicons/validations";
+import type { HasRequiredKeys, Namespaced } from "./type-helpers.js";
+import type { ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob } from '@atcute/atproto';
+import type { ActorIdentifier, Blob, CanonicalResourceUri, Cid, Did, ResourceUri } from "@atcute/lexicons";
+import * as v from '@atcute/lexicons/validations';
 
-interface GetRecordParams<K extends keyof Records> extends ComAtprotoRepoGetRecord.Params { collection: K; }
-interface ListRecordsParams<K extends keyof Records> extends ComAtprotoRepoListRecords.Params { collection: K; }
-interface PutRecordInput<K extends keyof Records> extends ComAtprotoRepoPutRecord.Input { collection: K; record: Records[K]; }
-interface CreateRecordInput<K extends keyof Records> extends ComAtprotoRepoCreateRecord.Input { collection: K; record: Records[K]; }
-interface DeleteRecordInput<K extends keyof Records> extends ComAtprotoRepoDeleteRecord.Input { collection: K; }
+interface GetRecordParams<K extends keyof Records> extends ComAtprotoRepoGetRecord.$params { collection: K; }
+interface ListRecordsParams<K extends keyof Records> extends ComAtprotoRepoListRecords.$params { collection: K; }
+interface PutRecordInput<K extends keyof Records> extends ComAtprotoRepoPutRecord.$input { collection: K; record: v.InferInput<Records[K]>; }
+interface CreateRecordInput<K extends keyof Records> extends ComAtprotoRepoCreateRecord.$input { collection: K; record: v.InferInput<Records[K]>; }
+interface DeleteRecordInput<K extends keyof Records> extends ComAtprotoRepoDeleteRecord.$input { collection: K; }
 
 interface GetRecordOutput<K extends keyof Records> {
-    cid?: At.CID;
-    uri: AtUri;
-    value: Records[K];
+    cid?: Cid;
+    readonly uri: AtUri;
+    value: v.InferInput<Records[K]>;
 }
 
 interface ListRecordsOutput<K extends keyof Records> {
     records: {
-        cid: At.CID;
-        uri: AtUri;
-        value: Records[K];
+        cid: Cid;
+        readonly uri: AtUri;
+        value: v.InferInput<Records[K]>;
     }[];
+    cursor?: string | undefined;
+}
+
+class XRPCError extends Error {
+    kind: string;
+    constructor(kind: string, message: string) {
+        super(message);
+        this.kind = kind;
+    }
 }
 
 export function isInvalidSwapError(err: unknown) {
@@ -35,36 +49,13 @@ export function isRecordNotFoundError(err: unknown) {
 }
 
 interface Record {
-    uri: At.Uri;
-    value: unknown;
+    uri: ResourceUri;
+    value: { [key: string]: unknown };
 }
-type TypedRecord<K extends keyof Records, R extends Record = Record> = Omit<R, keyof Record> & {
+type TypedRecord<K extends keyof Records, R> = Omit<R, keyof Record> & {
     readonly uri: AtUri;
-    value: Records[K];
+    value: v.InferInput<Records[K]>;
 };
-
-function makeRecordTyped<K extends keyof Records, R extends Record>(record: R): TypedRecord<K, R> {
-    let memoizedAtUri: AtUri | undefined;
-    const uri = record.uri; // closure variable
-    return {
-        ...record,
-        value: record.value as Records[K],
-        get uri() {
-            return memoizedAtUri ??= new AtUri(uri);
-        }
-    };
-}
-
-function makeRecordsTyped<
-    K extends keyof Records,
-    R extends Record = Record,
-    T extends { records: R[] } = { records: R[] },
->(value: T): Omit<T, 'records'> & { records: TypedRecord<K, R>[] } {
-    return {
-        ...value,
-        records: value.records.map(makeRecordTyped)
-    };
-}
 
 type OutputOf<T> = T extends { output: infer U; } ? U : void;
 
@@ -90,12 +81,12 @@ type DataThenParams<T>
         : T extends { params: infer W }
             ? [data: undefined, params: W]
             : [];
-            
-export class KittyAgent<X extends XRPC = XRPC> {
-    public readonly xrpc: X;
 
-    constructor(opts: XRPCOptions | X) {
-        this.xrpc = opts instanceof XRPC ? opts as X : new XRPC(opts) as X;
+export class KittyAgent {
+    public readonly xrpc: Client;
+
+    constructor(opts: ClientOptions | Client) {
+        this.xrpc = opts instanceof Client ? opts as Client : new Client(opts) as Client;
     }
 
     /**
@@ -112,7 +103,7 @@ export class KittyAgent<X extends XRPC = XRPC> {
         return new KittyAgent({ handler: simpleFetchHandler({ service }) });
     }
 
-    private static readonly pdsAgentCache = new Map<At.DID, KittyAgent>();
+    private static readonly pdsAgentCache = new Map<Did, KittyAgent>();
 
     /**
      * Gets a read-only client for the PDS hosting a specific account via handle or DID.
@@ -135,76 +126,143 @@ export class KittyAgent<X extends XRPC = XRPC> {
      */
     static async createPdsWithCredentials(handleOrDid: string) {
         const { did, pds } = await getDidAndPds(handleOrDid);
-        
+
         const manager = new CredentialManager({ service: pds });
         const agent = new KittyAgent({ handler: manager });
 
         return { did, manager, agent };
     }
 
-    /** Makes a request to the XRPC service */
-    async request(options: XRPCRequestOptions): Promise<XRPCResponse> {
-        return await this.xrpc.request(options);
+	/**
+	 * clones this XRPC client
+	 * @param opts options to merge with
+	 * @returns the cloned XRPC client
+	 */
+	clone({ handler = this.xrpc.handler, proxy = this.xrpc.proxy }: Partial<ClientOptions> = {}): KittyAgent {
+		return new KittyAgent({ handler, proxy });
+	}
+
+	/**
+	 * performs an XRPC query request (HTTP GET)
+	 * @param name NSID of the query
+	 * @param options query options
+	 */
+	get<TName extends keyof XRPCQueries, TInit extends QueryRequestOptions<XRPCQueries[TName]>>(
+		name: TName,
+		...options: HasRequiredKeys<TInit> extends true ? [init: TInit] : [init?: TInit]
+	): Promise<ClientResponse<XRPCQueries[TName], TInit>> {
+        return this.xrpc.get(name, ...options);
     }
 
-    async query<K extends keyof Queries>(
-        nsid: K,
-        ...args: ParamsThenData<Queries[K]>
-    ): Promise<OutputOf<Queries[K]>> {
-        const [params, data] = args as unknown[];
-
-        const { data: outData } = await this.xrpc.get(nsid, { params, data, } as any);
-
-        return outData;
+	/**
+	 * performs an XRPC procedure request (HTTP POST)
+	 * @param name NSID of the procedure
+	 * @param options procedure options
+	 */
+	post<TName extends keyof XRPCProcedures, TInit extends ProcedureRequestOptions<XRPCProcedures[TName]>>(
+		name: TName,
+		...options: HasRequiredKeys<TInit> extends true ? [init: TInit] : [init?: TInit]
+	): Promise<ClientResponse<XRPCProcedures[TName], TInit>> {
+        return this.xrpc.post(name, ...options);
     }
 
-    async call<K extends keyof Procedures>(
-        nsid: K,
-        ...args: DataThenParams<Procedures[K]>
-    ): Promise<OutputOf<Procedures[K]>> {
-        const [data, params] = args as unknown[];
-
-        const { data: outData } = await this.xrpc.call(nsid, { params, data } as any);
-
-        return outData;
+	/**
+	 * performs an XRPC call with schema validation
+	 * @param schema the lexicon schema for the endpoint, or a namespace containing mainSchema
+	 * @param options call options
+	 */
+	call<TMeta extends XRPCQueryMetadata | XRPCProcedureMetadata, TInit extends CallRequestOptions<TMeta>>(
+		schema: TMeta | Namespaced<TMeta>,
+		...options: HasRequiredKeys<TInit> extends true ? [init: TInit] : [init?: TInit]
+	): Promise<ClientResponse<TMeta, TInit>> {
+        return this.xrpc.call(schema, ...options);
     }
 
-    async get<K extends keyof Records>(params: GetRecordParams<K>): Promise<GetRecordOutput<K>> {
-        const data = makeRecordTyped<K, ComAtprotoRepoGetRecord.Output>(await this.query('com.atproto.repo.getRecord', params));
-
-        return data;
+    private makeRecordTyped<
+        K extends keyof Records,
+        R extends Record
+    >(
+        record: R
+    ): TypedRecord<K, R> {
+        let memoizedAtUri: AtUri | undefined;
+        const uri = record.uri; // closure variable
+        return {
+            ...record,
+            value: record.value as v.InferInput<Records[K]>,
+            get uri() {
+                return memoizedAtUri ??= new AtUri(uri);
+            }
+        };
     }
 
-    async getBlob(params: ComAtprotoSyncGetBlob.Params | { did: At.DID, cid: At.Blob }): Promise<Uint8Array | string> {
-        if (typeof params.cid !== 'string') {
-            params = {
-                cid: params.cid.ref.$link as At.CID,
-                did: params.did,
-            } satisfies ComAtprotoSyncGetBlob.Params;
+    private makeRecordsTyped<
+        K extends keyof Records,
+        R extends Record,
+        T extends { records: R[] } = { records: R[] },
+    >(value: T): Omit<T, 'records'> & { records: TypedRecord<K, R>[] } {
+        return {
+            ...value,
+            records: value.records.map(this.makeRecordTyped.bind(this))
+        };
+    }
+
+    async getRecord<K extends keyof Records>(params: GetRecordParams<K>): Promise<GetRecordOutput<K>> {
+        const response = await this.xrpc.get('com.atproto.repo.getRecord', {
+            params: {
+                repo: params.repo,
+                collection: params.collection,
+                rkey: params.rkey,
+            }
+        });
+
+        if (!response.ok) {
+            throw new XRPCError(response.data?.error || 'Unknown error', response.data?.message || 'An unknown error occurred');
         }
 
-        const data = await this.query('com.atproto.sync.getBlob', params as ComAtprotoSyncGetBlob.Params);
+        return this.makeRecordTyped<K, {
+            uri: ResourceUri;
+            value: globalThis.Record<string, unknown>;
+            cid?: string | undefined;
+        }>(response.data);
+    }
 
-        return data;
+    async getBlob(params: ComAtprotoSyncGetBlob.$params | { did: Did, cid: Blob }): Promise<Uint8Array | string> {
+        if (typeof params.cid !== 'string') {
+            params = {
+                cid: params.cid.ref.$link,
+                did: params.did,
+            } satisfies ComAtprotoSyncGetBlob.$params;
+        }
+
+        const data = await this.get('com.atproto.sync.getBlob', {
+            as: 'bytes',
+            params: params as ComAtprotoSyncGetBlob.$params
+        });
+
+        if (!data.ok) {
+            throw new XRPCError(data.data?.error || 'Unknown', data.data?.message || 'An unknown error occurred');
+        }
+
+        return data.data;
     }
 
     /**
      * Atcute likes to return blobs as text sometimes. I don't know why yet. This returns them as binary if that
      * happens.
      */
-    async getBlobAsBinary(params: ComAtprotoSyncGetBlob.Params | { did: At.DID, cid: At.Blob }) {
+    async getBlobAsBinary(params: ComAtprotoSyncGetBlob.$params | { did: Did, cid: Blob }) {
         let blob: string | Uint8Array = await this.getBlob(params);
 
         if (typeof blob === 'string') blob = new TextEncoder().encode(blob);
 
         return blob;
     }
-    
+
     /**
      * Atcute likes to return blobs as text sometimes. I don't know why yet. This returns them as text no matter what,
      * and also allows you to specify an encoding.
      */
-    async getBlobAsText(params: ComAtprotoSyncGetBlob.Params | { did: At.DID, cid: At.Blob }, encoding?: string) {
+    async getBlobAsText(params: ComAtprotoSyncGetBlob.$params | { did: Did, cid: Blob }, encoding?: string) {
         let blob: string | Uint8Array = await this.getBlob(params);
 
         if (typeof blob !== 'string') blob = new TextDecoder(encoding).decode(blob);
@@ -212,9 +270,9 @@ export class KittyAgent<X extends XRPC = XRPC> {
         return blob;
     }
 
-    async tryGet<K extends keyof Records>(params: GetRecordParams<K>) {
+    async tryGetRecord<K extends keyof Records>(params: GetRecordParams<K>) {
         try {
-            return await this.get(params);
+            return await this.getRecord(params);
         } catch (err) {
             if (!isRecordNotFoundError(err)) throw err;
             return {
@@ -226,21 +284,44 @@ export class KittyAgent<X extends XRPC = XRPC> {
     }
 
     async list<K extends keyof Records>(params: ListRecordsParams<K>): Promise<ListRecordsOutput<K>> {
-        const data = makeRecordsTyped<K, ComAtprotoRepoListRecords.Record>(await this.query('com.atproto.repo.listRecords', params));
+        const response = await this.get('com.atproto.repo.listRecords', {
+            as: 'json',
+            params
+        });
 
-        return data;
+        if (!response.ok) {
+            throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
+        }
+
+        return this.makeRecordsTyped<K, {
+            uri: ResourceUri;
+            value: globalThis.Record<string, unknown>;
+            cid: string;
+        }>(response.data);
     }
 
     async put<K extends keyof Records>(params: PutRecordInput<K>) {
-        const data = await this.call('com.atproto.repo.putRecord', params);
+        const data = await this.post('com.atproto.repo.putRecord', {
+            input: params
+        });
 
-        return data;
+        if (!data.ok) {
+            throw new XRPCError(data.data?.error || 'Unknown', data.data?.message || 'An unknown error occurred');
+        }
+
+        return data.data;
     }
 
-    async uploadBlob(buf: Uint8Array | Blob) {
-        const data = await this.call('com.atproto.repo.uploadBlob', buf);
+    async uploadBlob(buf: Uint8Array | globalThis.Blob) {
+        const data = await this.post('com.atproto.repo.uploadBlob', {
+            input: buf
+        });
 
-        return data.blob;
+        if (!data.ok) {
+            throw new XRPCError(data.data?.error || 'Unknown', data.data?.message || 'An unknown error occurred');
+        }
+
+        return data.data.blob;
     }
 
     async trySwap<K extends keyof Records>(params: PutRecordInput<K>) {
@@ -256,18 +337,34 @@ export class KittyAgent<X extends XRPC = XRPC> {
     }
 
     async create<K extends keyof Records>(params: CreateRecordInput<K>) {
-        const data = await this.call('com.atproto.repo.createRecord', params);
+        const data = await this.post('com.atproto.repo.createRecord', {
+            input: params
+        });
 
-        return data;
+        if (!data.ok) {
+            throw new XRPCError(data.data?.error || 'Unknown', data.data?.message || 'An unknown error occurred');
+        }
+
+        return data.data;
     }
 
     async delete<K extends keyof Records>(params: DeleteRecordInput<K>) {
-        const data = await this.call('com.atproto.repo.deleteRecord', params);
+        const data = await this.post('com.atproto.repo.deleteRecord', {
+            input: params
+        });
 
-        return data;
+        if (!data.ok) {
+            throw new XRPCError(data.data?.error || 'Unknown', data.data?.message || 'An unknown error occurred');
+        }
+
+        return data.data;
     }
 
-    private async paginationHelper<K extends string, T extends { cursor?: string | undefined }, U>(
+    private async paginationHelper<
+        K extends string,
+        T extends { cursor?: string | undefined },
+        U
+    >(
         limit: number | undefined,
         key: K,
         query: (cursor: string | undefined, limit: number) => Promise<T>,
@@ -287,7 +384,7 @@ export class KittyAgent<X extends XRPC = XRPC> {
                     : limit / PER_PAGE > 1
                         ? PER_PAGE
                         : limit);
-            
+
             const theseResults = getResults(data);
 
             if (!theseResults.length ||
@@ -313,21 +410,32 @@ export class KittyAgent<X extends XRPC = XRPC> {
     }
 
     async paginatedList<K extends keyof Records>(params: {
-        repo: string,
+        repo: ActorIdentifier,
         collection: K,
         reverse?: boolean,
         limit?: number;
     }): Promise<ListRecordsOutput<K>> {
-        const data = makeRecordsTyped<K, ComAtprotoRepoListRecords.Record>(await this.paginationHelper(
+        const data = this.makeRecordsTyped<K, ComAtprotoRepoListRecords.$output['records'][0]>(await this.paginationHelper(
             params.limit,
             'records',
-            async (cursor, limit) => await this.query('com.atproto.repo.listRecords', {
-                repo: params.repo,
-                collection: params.collection,
-                limit,
-                reverse: params.reverse ?? true,
-                cursor
-            }),
+            async (cursor, limit) => {
+                const response = await this.get('com.atproto.repo.listRecords', {
+                    as: 'json',
+                    params: {
+                        repo: params.repo,
+                        collection: params.collection,
+                        limit,
+                        reverse: params.reverse ?? true,
+                        cursor
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
+                }
+
+                return response.data;
+            },
             output => output.records,
             (a, b) => a.uri === b.uri,
         ));
@@ -336,49 +444,86 @@ export class KittyAgent<X extends XRPC = XRPC> {
     }
 
     async paginatedListBlobs(params: {
-        did: At.DID,
+        did: Did,
         limit?: number;
     }) {
         return await this.paginationHelper(
             params.limit,
             'cids',
-            async (cursor, limit) => await this.query('com.atproto.sync.listBlobs', {
-                did: params.did,
-                limit,
-                cursor
-            }),
+            async (cursor, limit) => {
+                const response = await this.get('com.atproto.sync.listBlobs', {
+                    as: 'json',
+                    params: {
+                        did: params.did,
+                        limit,
+                        cursor
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
+                }
+
+                return response.data;
+            },
             output => output.cids,
             (a, b) => a === b,
         );
     }
 
     async paginatedListRepos(params: {
-        did: At.DID,
+        did: Did,
         limit?: number;
     }) {
         return await this.paginationHelper(
             params.limit,
             'repos',
-            async (cursor, limit) => await this.query('com.atproto.sync.listRepos', {
-                limit,
-                cursor
-            }),
+            async (cursor, limit) => {
+                const response = await this.get('com.atproto.sync.listRepos', {
+                    as: 'json',
+                    params: {
+                        // did: params.did,
+                        limit,
+                        cursor
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
+                }
+
+                return response.data;
+            },
             output => output.repos,
             (a, b) => a.did === b.did,
         );
     }
 
-    async batchWrite(params: ComAtprotoRepoApplyWrites.Input) {
-        return await this.call('com.atproto.repo.applyWrites', params);
-    }
-
-    async resolveHandle(handle: string): Promise<At.DID> {
-        if (handle.startsWith('did:')) return handle as At.DID;
-
-        const { did } = await this.query('com.atproto.identity.resolveHandle', {
-            handle
+    async batchWrite(params: ComAtprotoRepoApplyWrites.$input) {
+        const response = await this.post('com.atproto.repo.applyWrites', {
+            input: params
         });
 
-        return did;
+        if (!response.ok) {
+            throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
+        }
+
+        return response.data;
+    }
+
+    async resolveHandle(handle: `${string}.${string}`): Promise<Did> {
+        if (handle.startsWith('did:')) return handle as Did;
+
+        const response = await this.get('com.atproto.identity.resolveHandle', {
+            params: {
+                handle
+            }
+        });
+
+        if (!response.ok) {
+            throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
+        }
+
+        return response.data.did;
     }
 }

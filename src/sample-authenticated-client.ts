@@ -1,10 +1,10 @@
-import type { At } from "@atcute/client/lexicons";
+import type { Did } from "@atcute/lexicons";
 import type { KittyAgent } from "./agent.js";
 
 export class SampleAuthenticatedClient {
     constructor(private readonly loginState: {
         readonly handle: string;
-        readonly did: At.DID;
+        readonly did: Did;
         readonly pds: string;
         readonly agent: KittyAgent;
     }) {}

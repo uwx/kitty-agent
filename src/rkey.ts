@@ -1,6 +1,8 @@
-import type { At } from '@atcute/client/lexicons';
+import { parseResourceUri, type ResourceUri } from '@atcute/lexicons';
 
-export function rkey(uri: At.Uri | { uri: At.Uri }) {
+export function rkey(uri: ResourceUri | { uri: ResourceUri }) {
     if (typeof uri !== 'string') uri = uri.uri;
-    return uri.slice(uri.lastIndexOf('/') + 1);
+    const result = parseResourceUri(uri);
+    if (!result.ok) throw new Error(`Invalid resource URI: ${uri}`);
+    return result.value.rkey;
 }

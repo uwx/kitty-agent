@@ -1,10 +1,10 @@
-import type { At } from "@atcute/client/lexicons";
+import type { Did } from "@atcute/lexicons";
 import { isDid } from "./index.js";
 
 const SUBDOMAIN = '_atproto';
 const PREFIX = 'did=';
 
-export const resolveHandleViaDoH = async (handle: string): Promise<At.DID> => {
+export const resolveHandleViaDoH = async (handle: string): Promise<Did> => {
 	const url = new URL('https://mozilla.cloudflare-dns.com/dns-query');
 	url.searchParams.set('type', 'TXT');
 	url.searchParams.set('name', `${SUBDOMAIN}.${handle}`);

@@ -1,8 +1,8 @@
 // import { sha256 } from '@noble/hashes/sha256';
 import { type Cid, type CidLink, fromCidLink } from '@atcute/cid';
-import type { At } from '@atcute/client/lexicons';
+import type { Blob } from '@atcute/lexicons';
 
-export async function isCidMatching(data: ArrayBufferLike, blob: At.Blob) {
+export async function isCidMatching(data: BufferSource, blob: Blob) {
     const cid = fromCidLink(blob.ref);
     const digest = cid.digest.contents;
 
@@ -30,7 +30,7 @@ function isEqualBytes(bytes1: Uint8Array, bytes2: Uint8Array): boolean {
     return true;
 }
 
-export function getSha256(cidOrBlob: At.Blob | CidLink | Cid) {
+export function getSha256(cidOrBlob: Blob | CidLink | Cid) {
     if ('ref' in cidOrBlob) cidOrBlob = fromCidLink(cidOrBlob.ref);
     if ('$link' in cidOrBlob) cidOrBlob = fromCidLink(cidOrBlob);
     return arrayToHex(cidOrBlob.digest.contents);
@@ -43,5 +43,5 @@ function arrayToHex(arr: Iterable<number> | ArrayLike<number>) {
 
 function numberToHex(i: number) {
     return i.toString(16).padStart(2, '0');
-}  
+}
 

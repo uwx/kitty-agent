@@ -21,26 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-import type { At } from "@atcute/client/lexicons";
-
-/**
- * DID document
- */
-export interface DidDocument {
-    id: string;
-    alsoKnownAs?: string[];
-    verificationMethod?: Array<{
-        id: string;
-        type: string;
-        controller: string;
-        publicKeyMultibase?: string;
-    }>;
-    service?: Array<{
-        id: string;
-        type: string;
-        serviceEndpoint: string | Record<string, unknown>;
-    }>;
-}
+import type { DidDocument } from "@atcute/identity";
+import type { Did } from "@atcute/lexicons";
 
 /**
  * Retrieves AT Protocol PDS endpoint from the DID document, if available
@@ -90,7 +72,7 @@ function validateUrl(urlStr: string): string | undefined {
     }
 }
 
-export async function getDidDocument(did: At.DID): Promise<DidDocument> {
+export async function getDidDocument(did: Did): Promise<DidDocument> {
     const colon_index = did.indexOf(':', 4);
 
     const type = did.slice(4, colon_index);
@@ -135,8 +117,8 @@ export async function getDidDocument(did: At.DID): Promise<DidDocument> {
     return doc;
 }
 
-export function getDid(didDoc: DidDocument): At.DID {
-    return didDoc.id as At.DID;
+export function getDid(didDoc: DidDocument): Did {
+    return didDoc.id as Did;
 }
 
 export function getHandle(didDoc: DidDocument) {

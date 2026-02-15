@@ -1,9 +1,9 @@
-import type { At } from "@atcute/client/lexicons";
+import type { Did } from "@atcute/lexicons";
 import { isDid } from "./index.js";
 import { resolveHandleViaDoH } from "./doh.js";
 import { resolveHandleViaHttp } from "./http.js";
 
-const didCache = new Map<string, At.DID>();
+const didCache = new Map<string, Did>();
 export async function resolveHandleAnonymously(handle: string) {
     if (isDid(handle)) return handle;
     if (didCache.has(handle)) {

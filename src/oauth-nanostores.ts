@@ -1,9 +1,7 @@
-import type { At } from "@atcute/client/lexicons";
+import type { Did } from "@atcute/lexicons";
 import type { KittyAgent } from "./agent.js";
-import { OAuthClient } from "./oauth.js";
-import { getDidAndPds } from "./pds-helpers.js";
 import { BaseStatefulOAuthClient, LoginStateImpl, type Account, type LoginState } from "./oauth-stateful-base.js";
-import type { XRPC } from "@atcute/client";
+import type { Client } from "@atcute/client";
 
 export namespace Nanostores {
     export namespace Atom {
@@ -146,7 +144,7 @@ export namespace Nanostores {
          * @param initialValue Initial value of the store.
          * @returns The store object with methods to subscribe.
          */
-        
+
         // biome-ignore lint/complexity/noBannedTypes: imported code
         export type atom = <Value, StoreExt = {}>(
             ...args: undefined extends Value ? [] | [Value] : [Value]
@@ -291,7 +289,7 @@ export namespace Nanostores {
          * @param init Initialize store and return store destructor.
          * @returns The store object with methods to subscribe.
          */
-        
+
         // biome-ignore lint/complexity/noBannedTypes: imported code
         export type map = <Value extends object, StoreExt extends object = {}>(
             value?: Value
@@ -382,15 +380,15 @@ export class StatefulSvelteOAuthClient<TClient> extends BaseStatefulOAuthClient<
     get account(): Nanostores.Atom.ReadableAtom<Account | undefined> { return this._account; }
     readonly user: Nanostores.Atom.ReadableAtom<LoginState<TClient> | undefined>;
     readonly handle: Nanostores.Atom.ReadableAtom<string | undefined>;
-    readonly did: Nanostores.Atom.ReadableAtom<At.DID | undefined>;
+    readonly did: Nanostores.Atom.ReadableAtom<Did | undefined>;
     readonly pds: Nanostores.Atom.ReadableAtom<string | undefined>;
 
     protected get internal_account(): Account | undefined { return this._account.get(); }
     protected get internal_user(): LoginState<TClient> | undefined { return this.user.get(); }
-    protected get internal_agent(): KittyAgent<XRPC> | undefined { return this._agent.get(); }
+    protected get internal_agent(): KittyAgent<Client> | undefined { return this._agent.get(); }
     protected get internal_client(): TClient | undefined { return this._client.get(); }
     protected set internal_account(value: Account | undefined) { this._account.set(value); }
-    protected set internal_agent(value: KittyAgent<XRPC> | undefined) { this._agent.set(value); }
+    protected set internal_agent(value: KittyAgent<Client> | undefined) { this._agent.set(value); }
     protected set internal_client(value: TClient | undefined) { this._client.set(value); }
 
     constructor(
@@ -405,7 +403,7 @@ export class StatefulSvelteOAuthClient<TClient> extends BaseStatefulOAuthClient<
         },
         createClient: (loginState: {
             readonly handle: string;
-            readonly did: At.DID;
+            readonly did: Did;
             readonly pds: string;
             readonly agent: KittyAgent;
         }) => TClient,

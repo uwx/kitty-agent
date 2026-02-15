@@ -1,9 +1,7 @@
-import type { At } from "@atcute/client/lexicons";
+import type { Did } from "@atcute/lexicons";
 import type { KittyAgent } from "./agent.js";
-import { OAuthClient } from "./oauth.js";
-import { getDidAndPds } from "./pds-helpers.js";
 import { BaseStatefulOAuthClient, LoginStateImpl, type Account, type LoginState } from "./oauth-stateful-base.js";
-import type { XRPC } from "@atcute/client";
+import type { Client } from "@atcute/client";
 
 export namespace Store {
     /** Callback to inform of a value updates. */
@@ -38,7 +36,7 @@ export namespace Store {
          */
         update(this: void, updater: Updater<T>): void;
     }
-    
+
     /** One or more values from `Readable` stores. */
     export type StoresValues<T> =
         T extends Readable<infer U> ? U : { [K in keyof T]: T[K] extends Readable<infer U> ? U : never };
@@ -87,7 +85,7 @@ class WritableEx<T> extends ReadableEx<T, Store.Writable<T>> implements Store.Wr
     }
 
     update: (this: void, updater: Store.Updater<T>) => void;
-    
+
     /**
      * Set value and inform subscribers.
      * @param value to set
@@ -100,7 +98,7 @@ class SvelteAccessor {
         private readonly createWritableStore: <T>(value: T) => Store.Writable<T>,
         private readonly createDerivedStore: <T, S extends Store.Readable<any>[]>(stores: S, callback: (values: Store.StoresValues<S>) => T) => Store.Readable<T>,
     ) {}
-    
+
     writable<T>(initialValue: T) {
         return new WritableEx(this.createWritableStore(initialValue));
     }
@@ -118,15 +116,15 @@ export class StatefulSvelteOAuthClient<TClient> extends BaseStatefulOAuthClient<
     get account(): ReadableEx<Account | undefined> { return this._account; }
     readonly user: ReadableEx<LoginState<TClient> | undefined>;
     readonly handle: ReadableEx<string | undefined>;
-    readonly did: ReadableEx<At.DID | undefined>;
+    readonly did: ReadableEx<Did | undefined>;
     readonly pds: ReadableEx<string | undefined>;
-    
+
     protected get internal_account(): Account | undefined { return this._account.get(); }
     protected get internal_user(): LoginState<TClient> | undefined { return this.user.get(); }
-    protected get internal_agent(): KittyAgent<XRPC> | undefined { return this._agent.get(); }
+    protected get internal_agent(): KittyAgent<Client> | undefined { return this._agent.get(); }
     protected get internal_client(): TClient | undefined { return this._client.get(); }
     protected set internal_account(value: Account | undefined) { this._account.set(value); }
-    protected set internal_agent(value: KittyAgent<XRPC> | undefined) { this._agent.set(value); }
+    protected set internal_agent(value: KittyAgent<Client> | undefined) { this._agent.set(value); }
     protected set internal_client(value: TClient | undefined) { this._client.set(value); }
 
     constructor(
@@ -141,7 +139,7 @@ export class StatefulSvelteOAuthClient<TClient> extends BaseStatefulOAuthClient<
         },
         createClient: (loginState: {
             readonly handle: string;
-            readonly did: At.DID;
+            readonly did: Did;
             readonly pds: string;
             readonly agent: KittyAgent;
         }) => TClient,
@@ -155,14 +153,14 @@ export class StatefulSvelteOAuthClient<TClient> extends BaseStatefulOAuthClient<
             if (key in localStorage) {
                 value.set(options.deserializer(localStorage[key]));
             }
-        
+
             value.subscribe(newValue => {
                 localStorage[key] = options.serializer(newValue);
             });
-        
+
             return value;
         }
-        
+
         this._account = useLocalStorage<Account | undefined>('user', undefined, {
             deserializer(raw) { return raw === 'null' ? undefined : JSON.parse(raw); },
             serializer(value) { return value === undefined ? 'null' : JSON.stringify(value); },

@@ -1,7 +1,7 @@
-import type { At } from "@atcute/client/lexicons";
+import type { Did } from "@atcute/lexicons";
 import { isDid } from "./index.js";
 
-export const resolveHandleViaHttp = async (handle: string): Promise<At.DID> => {
+export const resolveHandleViaHttp = async (handle: string): Promise<Did> => {
 	const url = new URL('/.well-known/atproto-did', `https://${handle}`);
 
 	const response = await fetch(url, { redirect: 'error' });
