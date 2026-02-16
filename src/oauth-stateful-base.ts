@@ -2,6 +2,7 @@ import type { Did } from "@atcute/lexicons";
 import { KittyAgent } from "./agent.js";
 import { OAuthClient } from "./oauth.js";
 import { getDidAndPds } from "./pds-helpers.js";
+import { finalizeAuthorization, OAuthUserAgent } from "@atcute/oauth-browser-client";
 
 export interface LoginState<T> {
     readonly handle: string;
@@ -50,6 +51,20 @@ export abstract class BaseStatefulOAuthClient<TClient> extends OAuthClient {
         }) => TClient,
     ) {
         super(options);
+    }
+
+    async finalizeAuthorization(params: URLSearchParams) {
+        const account = this.internal_account;
+        if (!account) {
+            throw new Error('No account to finalize authorization for');
+        }
+
+        const { session } = await finalizeAuthorization(params);
+        const oauthAgent = new OAuthUserAgent(session);
+
+        const agent = new KittyAgent({ handler: oauthAgent });
+        this.internal_agent = agent;
+        this.internal_client = this.createClient({ did: account.did, pds: account.pds, handle: account.handle, agent });
     }
 
     async authenticateIfNecessary(

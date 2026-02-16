@@ -63,10 +63,6 @@ export class OAuthClient {
         throw new Error('Unreachable code');
     }
 
-    async finalizeAuthorization(params: URLSearchParams) {
-        return await finalizeAuthorization(params);
-    }
-
     async oauthAuthenticateOrRefresh(
         handle: string,
         refreshOnly: boolean
@@ -81,17 +77,6 @@ export class OAuthClient {
         } catch (err) {
             console.warn('Could not refresh session:', err);
         }
-
-        const params = new URLSearchParams(location.hash.slice(1));
-        if (!session && params && params.get('state')) {
-            console.log('Got session from OAuth redirect:', params);
-
-            // scrub params from URL to prevent replay
-            history.replaceState(null, '', location.pathname + location.search);
-
-            ({ session } = await finalizeAuthorization(params));
-        }
-
 
         console.log('Session', session);
 
