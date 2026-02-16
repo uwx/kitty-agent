@@ -46,7 +46,7 @@ export class OAuthClient {
     async oauthAuthenticate(handle: string) {
         const authUrl = await createAuthorizationUrl({
             target: { type: 'account', identifier: handle as ActorIdentifier },
-            scope: 'atproto transition:generic',
+            scope: this.scope,
         });
 
         console.log(authUrl);
