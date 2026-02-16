@@ -4,7 +4,7 @@ import { BaseStatefulOAuthClient, LoginStateImpl, type Account, type LoginState 
 import type { Client } from "@atcute/client";
 
 namespace PreactSignals {
-    export declare const BRAND_SYMBOL: unique symbol;
+    export declare const BRAND_SYMBOL: any;
     export type Node = {
         _source: Signal;
         _prevSource?: Node;
