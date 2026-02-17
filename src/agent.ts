@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-import { CredentialManager, simpleFetchHandler, Client, type ClientOptions, type CallRequestOptions, type ClientResponse, type ProcedureRequestOptions, type QueryRequestOptions } from "@atcute/client";
+import { CredentialManager, simpleFetchHandler, Client, type ClientOptions, type CallRequestOptions, type ClientResponse, type ProcedureRequestOptions, type QueryRequestOptions, type SuccessClientResponse } from "@atcute/client";
 import { AtUri } from "@atproto/syntax";
 import { getDidAndPds } from "./pds-helpers.js";
 import { resolveHandleAnonymously } from "./handles/resolve.js";
@@ -32,7 +32,7 @@ interface ListRecordsOutput<K extends keyof Records> {
     cursor?: string | undefined;
 }
 
-class XRPCError extends Error {
+export class XRPCError extends Error {
     kind: string;
     constructor(kind: string, message: string) {
         super(message);
@@ -167,6 +167,38 @@ export class KittyAgent {
     }
 
 	/**
+	 * performs an XRPC query request (HTTP GET)
+	 * @param name NSID of the query
+	 * @param options query options
+	 */
+	async getSafe<TName extends keyof XRPCQueries, TInit extends QueryRequestOptions<XRPCQueries[TName]>>(
+		name: TName,
+		...options: HasRequiredKeys<TInit> extends true ? [init: TInit] : [init?: TInit]
+	): Promise<SuccessClientResponse<XRPCQueries[TName], TInit>['data']> {
+        const response = await this.get(name, ...options as any);
+        if (!response.ok) {
+            throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
+        }
+        return response.data;
+    }
+
+	/**
+	 * performs an XRPC procedure request (HTTP POST)
+	 * @param name NSID of the procedure
+	 * @param options procedure options
+	 */
+	async postSafe<TName extends keyof XRPCProcedures, TInit extends ProcedureRequestOptions<XRPCProcedures[TName]>>(
+		name: TName,
+		...options: HasRequiredKeys<TInit> extends true ? [init: TInit] : [init?: TInit]
+	): Promise<SuccessClientResponse<XRPCProcedures[TName], TInit>['data']> {
+        const response = await this.post(name, ...options as any);
+        if (!response.ok) {
+            throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
+        }
+        return response.data;
+    }
+
+	/**
 	 * performs an XRPC call with schema validation
 	 * @param schema the lexicon schema for the endpoint, or a namespace containing mainSchema
 	 * @param options call options
@@ -216,7 +248,7 @@ export class KittyAgent {
         });
 
         if (!response.ok) {
-            throw new XRPCError(response.data?.error || 'Unknown error', response.data?.message || 'An unknown error occurred');
+            throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
         }
 
         return this.makeRecordTyped<K, {
