@@ -5,4 +5,6 @@ export * from './pds-helpers.js';
 export * from './shortid.js';
 export * from './shortid2.js';
 export * from './sample-authenticated-client.js';
+export * from './constellation.js';
+export * from './slingshot.js';
 export { resolveHandleAnonymously } from './handles/resolve.js';

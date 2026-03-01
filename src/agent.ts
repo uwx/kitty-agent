@@ -392,7 +392,7 @@ export class KittyAgent {
         return data.data;
     }
 
-    private async paginationHelper<
+    protected async paginationHelper<
         K extends string,
         T extends { cursor?: string | undefined },
         U
@@ -447,32 +447,19 @@ export class KittyAgent {
         reverse?: boolean,
         limit?: number;
     }): Promise<ListRecordsOutput<K>> {
-        const data = this.makeRecordsTyped<K, ComAtprotoRepoListRecords.$output['records'][0]>(await this.paginationHelper(
+        return await this.paginationHelper(
             params.limit,
             'records',
-            async (cursor, limit) => {
-                const response = await this.get('com.atproto.repo.listRecords', {
-                    as: 'json',
-                    params: {
-                        repo: params.repo,
-                        collection: params.collection,
-                        limit,
-                        reverse: params.reverse ?? true,
-                        cursor
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new XRPCError(response.data?.error || 'Unknown', response.data?.message || 'An unknown error occurred');
-                }
-
-                return response.data;
-            },
+            async (cursor, limit) => await this.list({
+                repo: params.repo,
+                collection: params.collection,
+                limit,
+                reverse: params.reverse ?? true,
+                cursor
+            }),
             output => output.records,
             (a, b) => a.uri === b.uri,
-        ));
-
-        return data as ListRecordsOutput<K>;
+        );
     }
 
     async paginatedListBlobs(params: {
