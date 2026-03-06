@@ -7,7 +7,7 @@ import { resolveHandleAnonymously } from "./handles/resolve.js";
 import type { Records, XRPCProcedures, XRPCQueries } from "@atcute/lexicons/ambient";
 import type { XRPCQueryMetadata, XRPCProcedureMetadata } from "@atcute/lexicons/validations";
 import type { HasRequiredKeys, Namespaced } from "./type-helpers.js";
-import type { ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob } from '@atcute/atproto';
+import type { ComAtprotoRepoApplyWrites, ComAtprotoRepoCreateRecord, ComAtprotoRepoDeleteRecord, ComAtprotoRepoGetRecord, ComAtprotoRepoListRecords, ComAtprotoRepoPutRecord, ComAtprotoSyncGetBlob, ComAtprotoSyncListRepos } from '@atcute/atproto';
 import type { ActorIdentifier, Blob, CanonicalResourceUri, Cid, Did, ResourceUri } from "@atcute/lexicons";
 import * as v from '@atcute/lexicons/validations';
 
@@ -31,6 +31,12 @@ interface ListRecordsOutput<K extends keyof Records> {
     }[];
     cursor?: string | undefined;
 }
+
+type PaginatedListRecordsOutput<K extends keyof Records> = AsyncIterable<{
+    cid: Cid;
+    readonly uri: AtUri;
+    value: v.InferInput<Records[K]>;
+}, { cursor?: string | undefined; }>
 
 export class XRPCError extends Error {
     kind: string;
@@ -392,20 +398,16 @@ export class KittyAgent {
         return data.data;
     }
 
-    protected async paginationHelper<
+    protected async *paginationHelper<
         K extends string,
-        T extends { cursor?: string | undefined },
+        T extends { cursor?: string | undefined } & { [k in K]: U[] },
         U
     >(
         limit: number | undefined,
         key: K,
-        query: (cursor: string | undefined, limit: number) => Promise<T>,
-        getResults: (t: T) => U[],
-        resultsEqual: (a: U, b: U) => boolean,
-    ): Promise<{ [k in K]: U[]; } & { cursor: string | undefined; }> {
+        query: (cursor: string | undefined, limit: number) => Promise<T>
+    ): AsyncIterable<U, { cursor: string | undefined; }> {
         const PER_PAGE = 100;
-
-        const results: U[] = [];
 
         let cursor: string | undefined = undefined;
         do {
@@ -417,37 +419,27 @@ export class KittyAgent {
                         ? PER_PAGE
                         : limit);
 
-            const theseResults = getResults(data);
-
-            if (!theseResults.length ||
-                theseResults.every(
-                    e => results.find(e1 => resultsEqual(e1, e))
-                )
-            ) {
-                break;
-            }
+            const theseResults = data[key];
 
             if (limit !== undefined) {
                 limit -= theseResults.length;
             }
 
-            results.push(...theseResults);
+            yield* theseResults;
 
             cursor = data.cursor;
-
-            if (!cursor) break;
         } while (cursor);
 
-        return { [key]: results, cursor } as { [k in K]: U[]; } & { cursor: string | undefined; };
+        return { cursor };
     }
 
-    async paginatedList<K extends keyof Records>(params: {
+    paginatedList<K extends keyof Records>(params: {
         repo: ActorIdentifier,
         collection: K,
         reverse?: boolean,
         limit?: number;
-    }): Promise<ListRecordsOutput<K>> {
-        return await this.paginationHelper(
+    }): PaginatedListRecordsOutput<K> {
+        return this.paginationHelper(
             params.limit,
             'records',
             async (cursor, limit) => await this.list({
@@ -456,17 +448,15 @@ export class KittyAgent {
                 limit,
                 reverse: params.reverse ?? true,
                 cursor
-            }),
-            output => output.records,
-            (a, b) => a.uri === b.uri,
+            })
         );
     }
 
-    async paginatedListBlobs(params: {
+    paginatedListBlobs(params: {
         did: Did,
         limit?: number;
-    }) {
-        return await this.paginationHelper(
+    }): AsyncIterable<string, { cursor?: string | undefined; }> {
+        return this.paginationHelper(
             params.limit,
             'cids',
             async (cursor, limit) => {
@@ -484,17 +474,15 @@ export class KittyAgent {
                 }
 
                 return response.data;
-            },
-            output => output.cids,
-            (a, b) => a === b,
+            }
         );
     }
 
-    async paginatedListRepos(params: {
+    paginatedListRepos(params: {
         did: Did,
         limit?: number;
-    }) {
-        return await this.paginationHelper(
+    }): AsyncIterable<ComAtprotoSyncListRepos.Repo, { cursor?: string | undefined; }> {
+        return this.paginationHelper(
             params.limit,
             'repos',
             async (cursor, limit) => {
@@ -512,9 +500,7 @@ export class KittyAgent {
                 }
 
                 return response.data;
-            },
-            output => output.repos,
-            (a, b) => a.did === b.did,
+            }
         );
     }
 

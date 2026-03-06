@@ -4,48 +4,10 @@ import type { Records } from "@atcute/lexicons/ambient";
 import type { UriString } from "@atproto/syntax";
 
 export class ConstellationClient extends KittyAgent {
-    // Idk why the original paginationHelper is so complicated; it should eventually be replaced with this.
-    protected async paginationHelperSimple<
-        K extends string,
-        T extends { cursor?: string | undefined } & { [k in K]: U[] },
-        U
-    >(
-        limit: number | undefined,
-        key: K,
-        query: (cursor: string | undefined, limit: number) => Promise<T>
-    ): Promise<{ [k in K]: U[]; } & { cursor: string | undefined; }> {
-        const PER_PAGE = 100;
-
-        const results: U[] = [];
-
-        let cursor: string | undefined = undefined;
-        do {
-            const data = await query(
-                cursor,
-                limit === undefined
-                    ? PER_PAGE
-                    : limit / PER_PAGE > 1
-                        ? PER_PAGE
-                        : limit);
-
-            const theseResults = data[key];
-
-            if (limit !== undefined) {
-                limit -= theseResults.length;
-            }
-
-            results.push(...theseResults);
-
-            cursor = data.cursor;
-        } while (cursor);
-
-        return { [key]: results, cursor } as { [k in K]: U[]; } & { cursor: string | undefined; };
-    }
-
-    constructor({ userAgent }: { userAgent: string }) {
+    constructor({ userAgent, service }: { userAgent: string; service?: string }) {
         super({
             handler: simpleFetchHandler({
-                service: 'https://constellation.microcosm.blue',
+                service: service ?? 'https://constellation.microcosm.blue',
                 fetch(input, init) {
                     return fetch(input, {
                         ...init,
@@ -87,7 +49,7 @@ export class ConstellationClient extends KittyAgent {
         });
     }
 
-    async getAllBacklinks({
+    getAllBacklinks({
         subject,
         source,
         did,
@@ -100,7 +62,7 @@ export class ConstellationClient extends KittyAgent {
         limit?: number,
         reverse?: boolean
     }) {
-        return await this.paginationHelperSimple(
+        return this.paginationHelper(
             limit,
             'records',
             async (cursor, limit) => {
