@@ -2,6 +2,7 @@ import { simpleFetchHandler } from "@atcute/client";import { KittyAgent } from "
 import type { ActorIdentifier, Did, Nsid, RecordKey, ResourceUri } from "@atcute/lexicons";
 import type { Records } from "@atcute/lexicons/ambient";
 import type { UriString } from "@atproto/syntax";
+import type { BlueMicrocosmLinksGetBacklinks } from "./lexicons/index.js";
 
 export class ConstellationClient extends KittyAgent {
     constructor({ userAgent, service }: { userAgent: string; service?: string }) {
@@ -61,7 +62,7 @@ export class ConstellationClient extends KittyAgent {
         did?: Did[],
         limit?: number,
         reverse?: boolean
-    }) {
+    }): AsyncIterable<BlueMicrocosmLinksGetBacklinks.LinkRecord, { cursor?: string | undefined; }> {
         return this.paginationHelper(
             limit,
             'records',
