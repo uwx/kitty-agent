@@ -60,27 +60,27 @@ class Signal<T> {
     }
 }
 
-export function useAccount<TClient>(client: StatefulPreactOAuthClient<TClient>): Account | undefined {
+export function useAccount<TClient>(client: StatefulReactOAuthClient<TClient>): Account | undefined {
     return client.account.useSignal();
 }
 
-export function useUser<TClient>(client: StatefulPreactOAuthClient<TClient>): LoginState<TClient> | undefined {
+export function useUser<TClient>(client: StatefulReactOAuthClient<TClient>): LoginState<TClient> | undefined {
     return client.user.useSignal();
 }
 
-export function useHandle<TClient>(client: StatefulPreactOAuthClient<TClient>): string | undefined {
+export function useHandle<TClient>(client: StatefulReactOAuthClient<TClient>): string | undefined {
     return client.handle.useSignal();
 }
 
-export function useDid<TClient>(client: StatefulPreactOAuthClient<TClient>): Did | undefined {
+export function useDid<TClient>(client: StatefulReactOAuthClient<TClient>): Did | undefined {
     return client.did.useSignal();
 }
 
-export function usePds<TClient>(client: StatefulPreactOAuthClient<TClient>): string | undefined {
+export function usePds<TClient>(client: StatefulReactOAuthClient<TClient>): string | undefined {
     return client.pds.useSignal();
 }
 
-export class StatefulPreactOAuthClient<TClient> extends BaseStatefulOAuthClient<TClient> {
+export class StatefulReactOAuthClient<TClient> extends BaseStatefulOAuthClient<TClient> {
     private _account: Signal<Account | undefined>;
     private _agent: Signal<KittyAgent | undefined>;
     private _client: Signal<TClient | undefined>;
