@@ -45,7 +45,7 @@ class Signal<T> {
         const getSnapshot = () => this._value;
         return this.useSyncExternalStore(subscribe, getSnapshot);
     }
-    
+
     static computed<Args extends readonly Signal<any>[], T>(computeFn: (...args: SignalValues<Args>) => T, dependencies: Args): Signal<T> {
         const useSyncExternalStore = dependencies[0].useSyncExternalStore;
         const computedSignal = new Signal<T>(computeFn(...dependencies.map(dep => dep.value) as SignalValues<Args>), useSyncExternalStore);
@@ -139,14 +139,8 @@ export class StatefulPreactOAuthClient<TClient> extends BaseStatefulOAuthClient<
         this.user = Signal.computed((account, agent, client) => {
             return account && agent && client ? new LoginStateImpl(account, agent, client) as LoginState<TClient> : undefined;
         }, [this._account, this._agent, this._client] as const);
-        this.handle = Signal.computed((account) => account?.handle, [
-            this._account,
-        ] as const);
-        this.did = Signal.computed((account) => account?.did, [
-            this._account,
-        ] as const);
-        this.pds = Signal.computed((account) => account?.pds, [
-            this._account,
-        ] as const);
+        this.handle = Signal.computed((account) => account?.handle, [this._account] as const);
+        this.did = Signal.computed((account) => account?.did, [this._account] as const);
+        this.pds = Signal.computed((account) => account?.pds, [this._account] as const);
     }
 }
